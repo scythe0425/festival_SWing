@@ -13,6 +13,7 @@ import { MENU_LIST, COVER_MENU_ID, expandKitchenLines } from "../shared/menu.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3002;
+const STATE_FILE = process.env.STATE_FILE || path.join(__dirname, "..", "data", "state.json");
 const distDir = path.join(__dirname, "..", "dist");
 const distIndex = path.join(distDir, "index.html");
 /** 빌드 산출물이 있으면 단일 포트로 정적 호스팅 (npm start) */
@@ -22,6 +23,8 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
+  pingTimeout: 60000,
+  pingInterval: 25000,
   cors: !hasDist
     ? { origin: ["http://127.0.0.1:5173", "http://localhost:5173"], methods: ["GET", "POST"] }
     : undefined,
@@ -105,7 +108,48 @@ function getSnapshot() {
   };
 }
 
+function saveState() {
+  try {
+    const dir = path.dirname(STATE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      STATE_FILE,
+      JSON.stringify({
+        soldOutIds: [...state.soldOutIds],
+        kitchenQueue: state.kitchenQueue,
+        tables: state.tables,
+        settings: state.settings,
+        salesStats: state.salesStats,
+        reservations: state.reservations,
+      }),
+      "utf8"
+    );
+  } catch (e) {
+    console.error("[state] 저장 실패:", e.message);
+  }
+}
+
+function loadState() {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    if (Array.isArray(raw.soldOutIds)) state.soldOutIds = new Set(raw.soldOutIds);
+    if (Array.isArray(raw.kitchenQueue)) state.kitchenQueue = raw.kitchenQueue;
+    if (raw.tables && typeof raw.tables === "object") state.tables = raw.tables;
+    if (raw.settings?.defaultLimitMinutes) state.settings.defaultLimitMinutes = raw.settings.defaultLimitMinutes;
+    if (raw.settings?.extensionMinutes) state.settings.extensionMinutes = raw.settings.extensionMinutes;
+    if (raw.salesStats) state.salesStats = { ...state.salesStats, ...raw.salesStats };
+    if (Array.isArray(raw.reservations)) state.reservations = raw.reservations;
+    console.log("[state] 저장된 상태를 복구했습니다.");
+  } catch (e) {
+    console.error("[state] 복구 실패, 초기 상태로 시작:", e.message);
+  }
+}
+
+loadState();
+
 function broadcastState() {
+  saveState();
   io.emit("state", getSnapshot());
 }
 

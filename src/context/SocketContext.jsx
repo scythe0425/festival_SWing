@@ -16,7 +16,7 @@ export function SocketProvider({ children }) {
 
   const socket = useMemo(() => {
     const url = import.meta.env.DEV ? "http://127.0.0.1:3002" : undefined;
-    return io(url, { transports: ["websocket", "polling"] });
+    return io(url, { transports: ["websocket", "polling"], reconnectionDelayMax: 10000 });
   }, []);
 
   useEffect(() => {
