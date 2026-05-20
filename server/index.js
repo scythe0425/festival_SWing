@@ -48,7 +48,7 @@ const state = {
     /** 「시간 연장」 한 번당 제한 시간에 더해지는 분(타이머는 그대로) */
     extensionMinutes: 60,
   },
-  /** 매출 집계: 「주문 완료」 접수 기준(인메모리, 서버 재시작 시 초기화) */
+  /** 매출 집계: 「주문 완료」 접수 기준(state.json에 영속 저장) */
   salesStats: {
     /** menuId -> 누적 */
     byMenuId: /** @type {Record<number, { qty: number, revenue: number }>} */ ({}),
@@ -126,8 +126,9 @@ function saveState() {
   try {
     const dir = path.dirname(STATE_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const tmp = STATE_FILE + ".tmp";
     fs.writeFileSync(
-      STATE_FILE,
+      tmp,
       JSON.stringify({
         soldOutIds: [...state.soldOutIds],
         kitchenQueue: state.kitchenQueue,
@@ -138,6 +139,7 @@ function saveState() {
       }),
       "utf8"
     );
+    fs.renameSync(tmp, STATE_FILE);
   } catch (e) {
     console.error("[state] 저장 실패:", e.message);
   }
