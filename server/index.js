@@ -33,8 +33,8 @@ const io = new Server(server, {
 /** @typedef {{ menuId: number, name: string, price: number, qty: number, done?: boolean, lineKey?: string }} OrderLine */
 /** @typedef {{ id: string, table: string, items: OrderLine[], createdAt: number }} KitchenOrder */
 
-/** @type {{ timerStartedAt: number | null, bonusLimitMinutes: number, coverQty: number, partySize: number, depositor: string }} */
-const defaultTableState = () => ({ timerStartedAt: null, bonusLimitMinutes: 0, coverQty: 0, partySize: 0, depositor: "" });
+/** @type {{ timerStartedAt: number | null, bonusLimitMinutes: number, coverQty: number, partySize: number, depositor: string, depositors: string, totalAmount: number, orderHistory: Array<{items: Array<{name:string,price:number,qty:number}>, subtotal:number, createdAt:number}> }} */
+const defaultTableState = () => ({ timerStartedAt: null, bonusLimitMinutes: 0, coverQty: 0, partySize: 0, depositor: "", depositors: "", totalAmount: 0, orderHistory: [] });
 
 /** 서버 단일 상태 */
 const state = {
@@ -96,6 +96,9 @@ function getSnapshot() {
             coverQty: Math.max(0, Math.floor(Number(v.coverQty) || 0)),
             partySize: Math.max(0, Math.floor(Number(v.partySize) || 0)),
             depositor: String(v.depositor ?? ""),
+            depositors: String(v.depositors ?? ""),
+            totalAmount: Math.max(0, Math.floor(Number(v.totalAmount) || 0)),
+            orderHistory: Array.isArray(v.orderHistory) ? v.orderHistory : [],
           },
         ];
       })
@@ -210,7 +213,21 @@ function submitOrder(tableRaw, items, partySize, depositor) {
   if (partySize > 0) {
     ts.partySize = partySize;
   }
-  if (depositor) ts.depositor = depositor;
+  if (depositor) {
+    ts.depositor = depositor;
+    const existing = ts.depositors ? ts.depositors.split(",").map((s) => s.trim()) : [];
+    if (!existing.includes(depositor)) {
+      ts.depositors = existing.length > 0 ? `${ts.depositors}, ${depositor}` : depositor;
+    }
+  }
+  const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
+  ts.totalAmount = Math.max(0, Math.floor(Number(ts.totalAmount) || 0)) + subtotal;
+  if (!Array.isArray(ts.orderHistory)) ts.orderHistory = [];
+  ts.orderHistory.push({
+    items: items.map((it) => ({ name: it.name, price: it.price, qty: it.qty })),
+    subtotal,
+    createdAt: Date.now(),
+  });
 
   const kitchenItems = items.filter((it) => it.menuId !== COVER_MENU_ID);
   if (kitchenItems.length > 0) {

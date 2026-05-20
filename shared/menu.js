@@ -6,6 +6,8 @@
 export const COVER_MENU_ID = 11;
 
 export const MENU_LIST = [
+  /* 기타 */
+  { id: COVER_MENU_ID, name: "자릿세", price: 5000, category: "기타" },
   /* 메인 */
   { id: 5, name: "닭강정", price: 18000, category: "메인" },
   { id: 6, name: "제육", price: 18000, category: "메인" },
@@ -14,8 +16,6 @@ export const MENU_LIST = [
   { id: 8, name: "콘치즈", price: 11000, category: "사이드" },
   { id: 9, name: "오지치즈 후라이", price: 11000, category: "사이드" },
   { id: 10, name: "주먹밥", price: 8000, category: "사이드" },
-  /* 기타 */
-  { id: COVER_MENU_ID, name: "자릿세", price: 5000, category: "기타" },
 ];
 
 /**
