@@ -1730,31 +1730,6 @@ a.reservation-call {
   }
 }
 
-/* 관리자 게이트 */
-.admin-gate {
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-}
-
-.admin-gate-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem;
-  width: min(320px, 90vw);
-}
-
-.admin-gate-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin: 0 0 1.25rem;
-  text-align: center;
-  color: var(--text);
-}
-
 /* 삭제 취소 스낵바 */
 .undo-toast {
   position: fixed;

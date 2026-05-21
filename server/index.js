@@ -13,7 +13,6 @@ import { MENU_LIST, COVER_MENU_ID, expandKitchenLines } from "../shared/menu.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3002;
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
 const STATE_FILE = process.env.STATE_FILE || path.join(__dirname, "..", "data", "state.json");
 const distDir = path.join(__dirname, "..", "dist");
 const distIndex = path.join(distDir, "index.html");
@@ -164,11 +163,6 @@ function loadState() {
 
 loadState();
 
-io.use((socket, next) => {
-  socket._isAdmin = !ADMIN_SECRET || socket.handshake.auth?.token === ADMIN_SECRET;
-  next();
-});
-
 function broadcastState() {
   saveState();
   io.emit("state", getSnapshot());
@@ -267,7 +261,6 @@ io.on("connection", (socket) => {
   socket.emit("state", getSnapshot());
 
   socket.on("order:submit", (payload, ack) => {
-    if (!socket._isAdmin) { if (typeof ack === "function") ack({ ok: false, error: "인증 필요" }); return; }
     const { table, quantities, partySize, submitId, depositor } = payload || {};
     if (isDuplicateSubmit(submitId)) {
       if (typeof ack === "function") ack({ ok: false, error: "중복 주문입니다." });
@@ -289,7 +282,6 @@ io.on("connection", (socket) => {
 
   /** 메뉴(라인) 단위 조리 완료 — 해당 줄만 완료 처리, 모두 완료 시 카드 제거 */
   socket.on("kitchen:completeLine", (payload) => {
-    if (!socket._isAdmin) return;
     const orderId = payload?.orderId;
     const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
     const order = state.kitchenQueue.find((o) => o.id === orderId);
@@ -322,7 +314,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("kitchen:uncompleteLine", (payload) => {
-    if (!socket._isAdmin) return;
     const orderId = payload?.orderId;
     const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
     const order = state.kitchenQueue.find((o) => o.id === orderId);
@@ -341,7 +332,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("kitchen:soldOut:toggle", (menuId) => {
-    if (!socket._isAdmin) return;
     const id = Number(menuId);
     if (!MENU_LIST.some((m) => m.id === id)) return;
     if (state.soldOutIds.has(id)) state.soldOutIds.delete(id);
@@ -350,7 +340,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("system:resetTable", (tableRaw) => {
-    if (!socket._isAdmin) return;
     const table = String(tableRaw).trim();
     if (!table) return;
     delete state.tables[table];
@@ -360,7 +349,6 @@ io.on("connection", (socket) => {
 
   /** 주방 대기·테이블 타이머·매출 집계·품절 표시까지 한 번에 비움(설정값은 유지) */
   socket.on("system:resetAll", () => {
-    if (!socket._isAdmin) return;
     state.kitchenQueue = [];
     state.tables = {};
     state.soldOutIds.clear();
@@ -374,7 +362,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("system:setDefaultLimitMinutes", (minutes) => {
-    if (!socket._isAdmin) return;
     state.settings.defaultLimitMinutes = Math.max(1, Math.floor(Number(minutes) || 90));
     broadcastState();
   });
@@ -403,7 +390,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("reservation:delete", (id) => {
-    if (!socket._isAdmin) return;
     const rid = String(id ?? "").trim();
     if (!rid) return;
     const idx = state.reservations.findIndex((r) => r.id === rid);

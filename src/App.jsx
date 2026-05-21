@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { SocketProvider } from "./context/SocketContext.jsx";
 import OrderPage from "./pages/OrderPage.jsx";
@@ -10,30 +9,6 @@ import ReservePage from "./pages/ReservePage.jsx";
 import ReservationsPage from "./pages/ReservationsPage.jsx";
 import ResetAllPage from "./pages/ResetAllPage.jsx";
 import ManualPage from "./pages/ManualPage.jsx";
-
-function AdminGate({ onConfirm }) {
-  const [input, setInput] = useState("");
-  return (
-    <div className="admin-gate">
-      <div className="admin-gate-panel">
-        <h1 className="admin-gate-title">주점 주문 관리</h1>
-        <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) onConfirm(input.trim()); }}>
-          <input
-            className="field-input"
-            type="password"
-            autoFocus
-            placeholder="관리자 키"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button type="submit" className="btn-primary btn-block" style={{ marginTop: "0.75rem" }}>
-            입장
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function AppShell() {
   const { pathname } = useLocation();
@@ -98,19 +73,6 @@ function AppShell() {
 }
 
 export default function App() {
-  const { pathname } = useLocation();
-  const isReserve = pathname === "/reserve" || pathname.startsWith("/reserve/");
-  const [ready, setReady] = useState(() => isReserve || !!localStorage.getItem("festivalAdminKey"));
-
-  if (!ready) {
-    return (
-      <AdminGate onConfirm={(token) => {
-        localStorage.setItem("festivalAdminKey", token);
-        setReady(true);
-      }} />
-    );
-  }
-
   return (
     <SocketProvider>
       <AppShell />
