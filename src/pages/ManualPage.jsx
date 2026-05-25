@@ -17,7 +17,7 @@ export default function ManualPage() {
 
         <div className="manual-subsection">
           <h3 className="manual-heading">인원당 최소 주문</h3>
-          <p className="manual-desc">인원 × 8,000원 이상 / 객단가 13,000원 이상</p>
+          <p className="manual-desc">인당 13,000원 이상</p>
           <div className="manual-table-wrap">
             <table className="manual-table">
               <thead>
@@ -30,18 +30,18 @@ export default function ManualPage() {
               <tbody>
                 <tr>
                   <td>2명</td>
-                  <td>16,000원 이상</td>
-                  <td>메인 1개 + 사이드 1개</td>
+                  <td>26,000원 이상</td>
+                  <td>메인 1개 + 주먹밥</td>
                 </tr>
                 <tr>
                   <td>3명</td>
-                  <td>24,000원 이상</td>
-                  <td>메인 1개 + 사이드 1개 또는 메인 2개</td>
+                  <td>40,000원 이상</td>
+                  <td>메인 1개 + 사이드 2개</td>
                 </tr>
                 <tr>
                   <td>4명</td>
-                  <td>32,000원 이상</td>
-                  <td>메인 2개</td>
+                  <td>52,000원 이상</td>
+                  <td>메인 2개 + 사이드 2개</td>
                 </tr>
               </tbody>
             </table>
