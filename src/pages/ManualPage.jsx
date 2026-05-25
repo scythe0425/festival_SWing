@@ -8,11 +8,11 @@ export default function ManualPage() {
         <h2 className="manual-role-badge">공통 운영 규정</h2>
 
         <div className="manual-subsection">
-          <h3 className="manual-heading">자릿세</h3>
+          <h3 className="manual-heading">자릿세 · 기본 안주</h3>
           <ul className="manual-list">
-            <li>인당 <strong>5,000원</strong> — 2시간 기준</li>
+            <li>자릿세 인당 <strong>5,000원</strong> / 기본 안주 인당 <strong>1,000원</strong> — 2시간 기준</li>
             <li>
-              자릿세는 <strong>별도 결제 없음</strong> — 서버가 첫 주문 시 주문서에 자릿세(인원수만큼)를 함께 담아 총액을 산정하고, 손님이 <strong>메뉴 금액 + 자릿세가 포함된 총액을 한 번에 입금</strong>하는 방식
+              별도 결제 없음 — 서버가 첫 주문 시 주문서에 <strong>자릿세 · 기본 안주를 인원수만큼</strong> 함께 담아 총액을 산정하고, 손님이 <strong>메뉴 금액 + 자릿세 + 기본 안주가 포함된 총액을 한 번에 입금</strong>하는 방식
             </li>
             <li>중간 합류 손님은 <strong>테이블 첫 손님 기준 2시간</strong>으로 통일 — 입장 시 명확히 안내</li>
           </ul>
@@ -67,8 +67,10 @@ export default function ManualPage() {
               </ul>
             </li>
             <li>
-              <strong>인원수</strong> 입력
+              <strong>인원수</strong> 입력 — 기존 테이블 인원에 <strong>누적 합산</strong>됨
               <ul className="manual-list manual-list--sub">
+                <li>첫 주문 시: 현재 테이블 전체 인원수 입력</li>
+                <li>중간 합류 주문 시: 새로 합류한 인원수만 입력 — 기존 인원에 자동 가산</li>
                 <li>테이블 현황 카드에 반영되므로 반드시 입력 (미입력 시 주문 완료 버튼 비활성)</li>
               </ul>
             </li>
@@ -78,7 +80,7 @@ export default function ManualPage() {
             <li>
               메뉴 <strong>+/−</strong> 버튼으로 수량 선택
               <ul className="manual-list manual-list--sub">
-                <li><strong>첫 주문 시 자릿세를 인원수만큼 반드시 담을 것</strong> — 자릿세는 별도 결제 없이 이 금액에 포함됨</li>
+                <li><strong>첫 주문 시 자릿세 · 기본 안주를 인원수만큼 반드시 담을 것</strong> — 별도 결제 없이 이 금액에 포함됨</li>
                 <li>「주문 불가」 표시 메뉴는 품절 처리된 항목 — 선택 불가</li>
                 <li>하단 선택 내역에서 담긴 항목과 합계 실시간 확인</li>
               </ul>

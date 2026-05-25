@@ -213,7 +213,7 @@ function submitOrder(tableRaw, items, partySize, depositor) {
   }
 
   if (partySize > 0) {
-    ts.partySize = partySize;
+    ts.partySize = Math.max(0, Math.floor(Number(ts.partySize) || 0)) + partySize;
   }
   if (depositor) {
     ts.depositor = depositor;
