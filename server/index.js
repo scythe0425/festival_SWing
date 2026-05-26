@@ -83,6 +83,7 @@ function getSnapshot() {
       items: o.items.map((i) => ({
         ...i,
         done: Boolean(i.done),
+        status: i.status ?? (i.done ? "done" : "pending"),
         lineKey: i.lineKey ?? null,
       })),
     })),
@@ -306,8 +307,9 @@ io.on("connection", (socket) => {
     }
 
     const line = order.items[idx];
-    if (!line || line.done === true) return;
+    if (!line || line.status === "done" || line.status === "served") return;
     line.done = true;
+    line.status = "done";
 
     broadcastState();
   });
@@ -327,6 +329,27 @@ io.on("connection", (socket) => {
     if (idx < 0) return;
 
     order.items[idx].done = false;
+    order.items[idx].status = "pending";
+    broadcastState();
+  });
+
+  socket.on("kitchen:serveLine", (payload) => {
+    const orderId = payload?.orderId;
+    const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
+    const order = state.kitchenQueue.find((o) => o.id === orderId);
+    if (!order?.items?.length) return;
+
+    let idx = -1;
+    if (lineKey) idx = order.items.findIndex((it) => it.lineKey === lineKey);
+    if (idx < 0 && payload?.lineIndex !== undefined) {
+      const n = parseInt(String(payload.lineIndex), 10);
+      if (Number.isInteger(n) && n >= 0 && n < order.items.length) idx = n;
+    }
+    if (idx < 0) return;
+
+    const line = order.items[idx];
+    if (!line || line.status !== "done") return;
+    line.status = "served";
     broadcastState();
   });
 

@@ -1267,7 +1267,20 @@ a.reservation-call {
 }
 
 .kc-item--done {
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 4px;
+}
+
+.kc-item--done .kc-item-name {
+  color: #f59e0b;
+}
+
+.kc-item--served {
   opacity: 0.4;
+}
+
+.kc-item--served .kc-item-name {
+  text-decoration: line-through;
 }
 
 .kc-item-name {
@@ -1299,6 +1312,22 @@ a.reservation-call {
 }
 
 .kc-btn-done:hover {
+  filter: brightness(1.08);
+}
+
+.kc-btn-serve {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  border: none;
+  background: #f59e0b;
+  color: #1a0f00;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kc-btn-serve:hover {
   filter: brightness(1.08);
 }
 

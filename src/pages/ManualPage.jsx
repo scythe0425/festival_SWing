@@ -151,14 +151,20 @@ export default function ManualPage() {
           <ul className="manual-list">
             <li>상단 <strong>대기 N건</strong> — 현재 처리해야 할 주문 수</li>
             <li>주문 카드 구성: <strong>테이블 번호</strong> + <strong>접수 시각</strong> + 메뉴 항목별 목록</li>
-            <li>조리 완료된 메뉴마다 <strong>완료</strong> 버튼 클릭 → 취소선으로 표시</li>
-            <li>실수로 완료 누른 경우 <strong>취소</strong> 버튼으로 즉시 되돌리기 가능</li>
-            <li>모든 항목 완료 후 카드는 유지됨 — <strong>✕ 버튼으로만 카드 삭제</strong> 가능</li>
+            <li>
+              각 메뉴마다 <strong>완료 → 서빙 → 취소</strong> 순서로 버튼 변경
+              <ul className="manual-list manual-list--sub">
+                <li><strong>완료</strong> — 조리 완료 (주황색 표시)</li>
+                <li><strong>서빙</strong> — 손님 테이블에 전달 완료 (흐림 처리)</li>
+                <li><strong>취소</strong> — 실수 시 초기 상태로 되돌리기</li>
+              </ul>
+            </li>
+            <li>카드는 <strong>✕ 버튼으로만 삭제</strong> — 전체 서빙 확인 후 제거</li>
           </ul>
           <div className="manual-warn">
             <p className="manual-warn-title">주의</p>
             <ul className="manual-list">
-              <li>모든 항목 완료 후에도 카드 유지 — 서빙 확인 후 <strong>✕</strong> 버튼으로 삭제</li>
+              <li>완료·서빙 후에도 카드 유지 — 전체 확인 후 <strong>✕</strong> 버튼으로 삭제</li>
               <li>주문이 많을 때 아래 카드를 놓치지 않도록 <strong>주기적으로 스크롤 확인</strong></li>
               <li>연결 끊김 시 우상단 표시 변경됨 — 재연결 전까지 신규 주문 수신 안됨</li>
             </ul>

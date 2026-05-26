@@ -6,6 +6,12 @@ function formatTime(ts) {
   return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
+function itemClass(status) {
+  if (status === "done") return "kc-item kc-item--done";
+  if (status === "served") return "kc-item kc-item--served";
+  return "kc-item";
+}
+
 export default function KitchenPage() {
   const { socket, connected, state } = useAppSocket();
   const queue = state?.kitchenQueue ?? [];
@@ -60,40 +66,41 @@ export default function KitchenPage() {
                 </button>
               </header>
               <ul className="kc-items">
-                {o.items.map((it, i) => (
-                  <li key={it.lineKey ?? `${o.id}-${i}`} className={`kc-item ${it.done ? "kc-item--done" : ""}`}>
-                    <span className="kc-item-name">{it.name}</span>
-                    {it.done ? (
-                      <button
-                        type="button"
-                        className="kc-btn-undo"
-                        onClick={() =>
-                          socket.emit("kitchen:uncompleteLine", {
-                            orderId: o.id,
-                            lineKey: it.lineKey,
-                            lineIndex: i,
-                          })
-                        }
-                      >
-                        취소
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="kc-btn-done"
-                        onClick={() =>
-                          socket.emit("kitchen:completeLine", {
-                            orderId: o.id,
-                            lineKey: it.lineKey,
-                            lineIndex: i,
-                          })
-                        }
-                      >
-                        완료
-                      </button>
-                    )}
-                  </li>
-                ))}
+                {o.items.map((it, i) => {
+                  const status = it.status ?? (it.done ? "done" : "pending");
+                  return (
+                    <li key={it.lineKey ?? `${o.id}-${i}`} className={itemClass(status)}>
+                      <span className="kc-item-name">{it.name}</span>
+                      {status === "pending" && (
+                        <button
+                          type="button"
+                          className="kc-btn-done"
+                          onClick={() => socket.emit("kitchen:completeLine", { orderId: o.id, lineKey: it.lineKey, lineIndex: i })}
+                        >
+                          완료
+                        </button>
+                      )}
+                      {status === "done" && (
+                        <button
+                          type="button"
+                          className="kc-btn-serve"
+                          onClick={() => socket.emit("kitchen:serveLine", { orderId: o.id, lineKey: it.lineKey, lineIndex: i })}
+                        >
+                          서빙
+                        </button>
+                      )}
+                      {status === "served" && (
+                        <button
+                          type="button"
+                          className="kc-btn-undo"
+                          onClick={() => socket.emit("kitchen:uncompleteLine", { orderId: o.id, lineKey: it.lineKey, lineIndex: i })}
+                        >
+                          취소
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </article>
           ))}
