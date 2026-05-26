@@ -8,6 +8,7 @@ import StatsPage from "./pages/StatsPage.jsx";
 import ReservationsPage from "./pages/ReservationsPage.jsx";
 import ResetAllPage from "./pages/ResetAllPage.jsx";
 import ManualPage from "./pages/ManualPage.jsx";
+import EventGamePage from "./pages/EventGamePage.jsx";
 
 function AppShell() {
   const { pathname } = useLocation();
@@ -28,6 +29,9 @@ function AppShell() {
         <nav className="app-nav">
           <NavLink end className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/">
             주문서
+          </NavLink>
+          <NavLink className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/game">
+            이벤트 게임
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/kitchen">
             주방
@@ -52,6 +56,7 @@ function AppShell() {
       <main className={`app-main${wideLayout ? " app-main--wide" : ""}`}>
         <Routes>
           <Route path="/" element={<OrderPage />} />
+          <Route path="/game" element={<EventGamePage />} />
           <Route path="/kitchen" element={<KitchenPage />} />
           <Route path="/system" element={<SystemPage />} />
           <Route path="/settings" element={<SettingsPage />} />

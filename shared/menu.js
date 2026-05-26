@@ -4,11 +4,13 @@
  * 자릿세(COVER_MENU_ID): 주방 조리 없음·시스템 인원(자릿세 수량 합) 집계.
  */
 export const COVER_MENU_ID = 11;
+export const GAME_MENU_ID = 13;
 
 export const MENU_LIST = [
   /* 기타 */
   { id: COVER_MENU_ID, name: "자릿세", price: 5000, category: "기타" },
   { id: 12, name: "기본 안주", price: 1000, category: "기타" },
+  { id: GAME_MENU_ID, name: "이벤트 게임", price: 1000, category: "기타", gameOnly: true },
   /* 메인 */
   { id: 5, name: "닭강정", price: 18000, category: "메인" },
   { id: 6, name: "제육", price: 18000, category: "메인" },
@@ -29,17 +31,14 @@ export function expandKitchenLines(items) {
   for (const it of items) {
     const m = MENU_LIST.find((x) => x.id === it.menuId);
     const parts = m?.kitchenParts;
-    if (Array.isArray(parts) && parts.length > 0) {
-      for (const partName of parts) {
-        out.push({
-          menuId: it.menuId,
-          name: String(partName),
-          price: 0,
-          qty: it.qty,
-        });
+    for (let i = 0; i < it.qty; i++) {
+      if (Array.isArray(parts) && parts.length > 0) {
+        for (const partName of parts) {
+          out.push({ menuId: it.menuId, name: String(partName), price: 0, qty: 1 });
+        }
+      } else {
+        out.push({ menuId: it.menuId, name: it.name, price: it.price, qty: 1 });
       }
-    } else {
-      out.push({ menuId: it.menuId, name: it.name, price: it.price, qty: it.qty });
     }
   }
   return out;
