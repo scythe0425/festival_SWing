@@ -57,6 +57,7 @@ const state = {
     orderSubmitCount: 0,
   },
   reservations: /** @type {{ id: string, name: string, partySize: number, phone: string, createdAt: number }[]} */ ([]),
+  eventGames: /** @type {{ id: string, depositor: string, amount: number, createdAt: number }[]} */ ([]),
 };
 
 function randomId() {
@@ -119,6 +120,7 @@ function getSnapshot() {
       orderSubmitCount: state.salesStats.orderSubmitCount,
     },
     reservations: state.reservations.map((r) => ({ ...r })),
+    eventGames: state.eventGames.map((g) => ({ ...g })),
   };
 }
 
@@ -136,6 +138,7 @@ function saveState() {
         settings: state.settings,
         salesStats: state.salesStats,
         reservations: state.reservations,
+        eventGames: state.eventGames,
       }),
       "utf8"
     );
@@ -155,6 +158,7 @@ function loadState() {
     if (raw.settings?.defaultLimitMinutes) state.settings.defaultLimitMinutes = raw.settings.defaultLimitMinutes;
     if (raw.salesStats) state.salesStats = { ...state.salesStats, ...raw.salesStats };
     if (Array.isArray(raw.reservations)) state.reservations = raw.reservations;
+    if (Array.isArray(raw.eventGames)) state.eventGames = raw.eventGames;
     console.log("[state] 저장된 상태를 복구했습니다.");
   } catch (e) {
     console.error("[state] 복구 실패, 초기 상태로 시작:", e.message);
@@ -358,6 +362,7 @@ io.on("connection", (socket) => {
       orderSubmitCount: 0,
     };
     state.reservations = [];
+    state.eventGames = [];
     broadcastState();
   });
 
@@ -397,6 +402,22 @@ io.on("connection", (socket) => {
       state.reservations.splice(idx, 1);
       broadcastState();
     }
+  });
+
+  socket.on("eventGame:submit", (payload, ack) => {
+    const depositor = String(payload?.depositor ?? "").trim().slice(0, 40);
+    const qty = Math.max(0, Math.floor(Number(payload?.qty) || 0));
+    const fail = (error) => { if (typeof ack === "function") ack({ ok: false, error }); };
+    if (!depositor) return fail("입금자를 입력하세요.");
+    if (qty < 1) return fail("수량을 선택하세요.");
+    const amount = qty * 1000;
+    state.eventGames.push({ id: randomId(), depositor, amount, createdAt: Date.now() });
+    const prev = state.salesStats.byMenuId[GAME_MENU_ID] || { qty: 0, revenue: 0 };
+    state.salesStats.byMenuId[GAME_MENU_ID] = { qty: prev.qty + qty, revenue: prev.revenue + amount };
+    state.salesStats.totalRevenue += amount;
+    state.salesStats.orderSubmitCount += 1;
+    broadcastState();
+    if (typeof ack === "function") ack({ ok: true });
   });
 });
 

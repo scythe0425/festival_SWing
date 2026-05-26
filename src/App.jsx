@@ -9,6 +9,7 @@ import ReservationsPage from "./pages/ReservationsPage.jsx";
 import ResetAllPage from "./pages/ResetAllPage.jsx";
 import ManualPage from "./pages/ManualPage.jsx";
 import EventGamePage from "./pages/EventGamePage.jsx";
+import EventGameHistoryPage from "./pages/EventGameHistoryPage.jsx";
 
 function AppShell() {
   const { pathname } = useLocation();
@@ -18,7 +19,8 @@ function AppShell() {
     pathname === "/settings" ||
     pathname === "/stats" ||
     pathname === "/reservations" ||
-    pathname === "/reset";
+    pathname === "/reset" ||
+    pathname === "/game-history";
 
   return (
     <>
@@ -32,6 +34,9 @@ function AppShell() {
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/game">
             이벤트 게임
+          </NavLink>
+          <NavLink className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/game-history">
+            게임 내역
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "nav-a active" : "nav-a")} to="/kitchen">
             주방
@@ -57,6 +62,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<OrderPage />} />
           <Route path="/game" element={<EventGamePage />} />
+          <Route path="/game-history" element={<EventGameHistoryPage />} />
           <Route path="/kitchen" element={<KitchenPage />} />
           <Route path="/system" element={<SystemPage />} />
           <Route path="/settings" element={<SettingsPage />} />
