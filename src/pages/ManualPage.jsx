@@ -12,7 +12,7 @@ export default function ManualPage() {
           <ul className="manual-list">
             <li>자릿세 인당 <strong>5,000원</strong> / 기본 안주 인당 <strong>1,000원</strong> — 2시간 기준</li>
             <li>
-              별도 결제 없음 — 서버가 첫 주문 시 주문서에 <strong>자릿세 · 기본 안주를 인원수만큼</strong> 함께 담아 총액을 산정하고, 손님이 <strong>메뉴 금액 + 자릿세 + 기본 안주가 포함된 총액을 한 번에 입금</strong>하는 방식
+              별도 결제 없음 — 서버가 첫 주문 시 주문서에 <strong>자릿세를 인원수만큼</strong> 함께 담아 총액을 산정하고, 손님이 <strong>메뉴 금액 + 자릿세가 포함된 총액을 한 번에 입금</strong>하는 방식
             </li>
             <li>중간 합류 손님은 <strong>테이블 첫 손님 기준 2시간</strong>으로 통일 — 입장 시 명확히 안내</li>
           </ul>
@@ -80,7 +80,7 @@ export default function ManualPage() {
             <li>
               메뉴 <strong>+/−</strong> 버튼으로 수량 선택
               <ul className="manual-list manual-list--sub">
-                <li><strong>첫 주문 시 자릿세 · 기본 안주를 인원수만큼 반드시 담을 것</strong> — 별도 결제 없이 이 금액에 포함됨</li>
+                <li><strong>첫 주문 시 자릿세를 인원수만큼 반드시 담을 것</strong> — 별도 결제 없이 이 금액에 포함됨</li>
                 <li>「주문 불가」 표시 메뉴는 품절 처리된 항목 — 선택 불가</li>
                 <li>하단 선택 내역에서 담긴 항목과 합계 실시간 확인</li>
               </ul>
@@ -153,12 +153,12 @@ export default function ManualPage() {
             <li>주문 카드 구성: <strong>테이블 번호</strong> + <strong>접수 시각</strong> + 메뉴 항목별 목록</li>
             <li>조리 완료된 메뉴마다 <strong>완료</strong> 버튼 클릭 → 취소선으로 표시</li>
             <li>실수로 완료 누른 경우 <strong>취소</strong> 버튼으로 즉시 되돌리기 가능</li>
-            <li>카드 내 <strong>모든 항목 완료 시 카드 자동 제거</strong></li>
+            <li>모든 항목 완료 후 카드는 유지됨 — <strong>✕ 버튼으로만 카드 삭제</strong> 가능</li>
           </ul>
           <div className="manual-warn">
             <p className="manual-warn-title">주의</p>
             <ul className="manual-list">
-              <li>모든 항목 완료 즉시 카드 사라짐 — 제거 전 테이블 번호 확인 후 서빙</li>
+              <li>모든 항목 완료 후에도 카드 유지 — 서빙 확인 후 <strong>✕</strong> 버튼으로 삭제</li>
               <li>주문이 많을 때 아래 카드를 놓치지 않도록 <strong>주기적으로 스크롤 확인</strong></li>
               <li>연결 끊김 시 우상단 표시 변경됨 — 재연결 전까지 신규 주문 수신 안됨</li>
             </ul>

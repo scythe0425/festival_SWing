@@ -309,11 +309,6 @@ io.on("connection", (socket) => {
     if (!line || line.done === true) return;
     line.done = true;
 
-    const allDone = order.items.every((it) => it.done === true);
-    if (allDone) {
-      const qidx = state.kitchenQueue.findIndex((o) => o.id === orderId);
-      if (qidx >= 0) state.kitchenQueue.splice(qidx, 1);
-    }
     broadcastState();
   });
 
