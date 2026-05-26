@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAppSocket } from "../context/SocketContext.jsx";
 
 function formatTime(ts) {
@@ -8,9 +9,30 @@ function formatTime(ts) {
 export default function KitchenPage() {
   const { socket, connected, state } = useAppSocket();
   const queue = state?.kitchenQueue ?? [];
+  const [confirmId, setConfirmId] = useState(null);
+
+  const confirmOrder = confirmId ? queue.find((o) => o.id === confirmId) : null;
+
+  const handleDelete = () => {
+    socket.emit("kitchen:deleteOrder", confirmId);
+    setConfirmId(null);
+  };
 
   return (
     <div className="page kitchen-page">
+      {confirmOrder && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setConfirmId(null)}>
+          <div className="modal-panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">{confirmOrder.table}번 주문 취소</h2>
+            <p className="modal-body">해당 주문을 주방 대기 목록에서 삭제할까요?</p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setConfirmId(null)}>취소</button>
+              <button type="button" className="btn-danger" onClick={handleDelete}>삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="kitchen-top">
         <h1 className="kitchen-h1">주방</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -28,6 +50,14 @@ export default function KitchenPage() {
               <header className="kc-head">
                 <span className="kc-table">{o.table}번</span>
                 <time className="kc-time">{formatTime(o.createdAt)}</time>
+                <button
+                  type="button"
+                  className="tc-close"
+                  aria-label="주문 취소"
+                  onClick={() => setConfirmId(o.id)}
+                >
+                  ✕
+                </button>
               </header>
               <ul className="kc-items">
                 {o.items.map((it, i) => (

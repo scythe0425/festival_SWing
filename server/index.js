@@ -404,6 +404,26 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("eventGame:delete", (id) => {
+    const rid = String(id ?? "").trim();
+    if (!rid) return;
+    const idx = state.eventGames.findIndex((g) => g.id === rid);
+    if (idx >= 0) {
+      state.eventGames.splice(idx, 1);
+      broadcastState();
+    }
+  });
+
+  socket.on("kitchen:deleteOrder", (orderId) => {
+    const id = String(orderId ?? "").trim();
+    if (!id) return;
+    const idx = state.kitchenQueue.findIndex((o) => o.id === id);
+    if (idx >= 0) {
+      state.kitchenQueue.splice(idx, 1);
+      broadcastState();
+    }
+  });
+
   socket.on("eventGame:submit", (payload, ack) => {
     const depositor = String(payload?.depositor ?? "").trim().slice(0, 40);
     const qty = Math.max(0, Math.floor(Number(payload?.qty) || 0));

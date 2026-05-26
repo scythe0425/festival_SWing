@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAppSocket } from "../context/SocketContext.jsx";
 
 function formatTime(ts) {
@@ -6,7 +6,9 @@ function formatTime(ts) {
 }
 
 export default function EventGameHistoryPage() {
-  const { connected, state } = useAppSocket();
+  const { socket, connected, state } = useAppSocket();
+  const [confirmId, setConfirmId] = useState(null);
+
   const list = useMemo(() => {
     const raw = state?.eventGames ?? [];
     return [...raw].sort((a, b) => b.createdAt - a.createdAt);
@@ -14,8 +16,30 @@ export default function EventGameHistoryPage() {
 
   const totalAmount = useMemo(() => list.reduce((s, g) => s + g.amount, 0), [list]);
 
+  const confirmTarget = confirmId ? list.find((g) => g.id === confirmId) : null;
+
+  const handleDelete = () => {
+    socket.emit("eventGame:delete", confirmId);
+    setConfirmId(null);
+  };
+
   return (
     <div className="page reservations-page">
+      {confirmTarget && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setConfirmId(null)}>
+          <div className="modal-panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">게임 내역 삭제</h2>
+            <p className="modal-body">
+              <strong>{confirmTarget.depositor}</strong> : {confirmTarget.amount.toLocaleString()}원 내역을 삭제할까요?
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setConfirmId(null)}>취소</button>
+              <button type="button" className="btn-danger" onClick={handleDelete}>삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="reservations-top">
         <h1 className="reservations-h1">이벤트 게임 내역</h1>
         <span className={`conn large ${connected ? "ok" : ""}`}>{connected ? "연결됨" : "연결 끊김"}</span>
@@ -38,6 +62,14 @@ export default function EventGameHistoryPage() {
               <span className="eg-sep">:</span>
               <span className="eg-amount">{g.amount.toLocaleString()}원</span>
               <time className="eg-time muted">{formatTime(g.createdAt)}</time>
+              <button
+                type="button"
+                className="tc-close"
+                aria-label="삭제"
+                onClick={() => setConfirmId(g.id)}
+              >
+                ✕
+              </button>
             </li>
           ))}
         </ul>
