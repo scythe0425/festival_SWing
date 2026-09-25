@@ -19,6 +19,14 @@ export default function OrderPage() {
 
   const menu = (state?.menu ?? []).filter((m) => !m.gameOnly);
   const joinGroup = (state?.joinGroups ?? []).find((g) => g.includes(table.trim()));
+  /** 합석 그룹이 시간 초과면 이번 주문으로 그룹 전체 타이머가 다시 시작됨 */
+  const joinGroupOver = (() => {
+    if (!joinGroup) return false;
+    const starts = joinGroup.map((t) => state?.tables?.[t]?.timerStartedAt).filter((v) => v != null);
+    if (!starts.length) return false;
+    const limitMs = (state?.settings?.defaultLimitMinutes ?? 120) * 60 * 1000;
+    return Date.now() - Math.min(...starts) >= limitMs;
+  })();
 
   const setQty = useCallback((menuId, delta) => {
     setQuantities((prev) => {
@@ -180,6 +188,11 @@ export default function OrderPage() {
           </label>
         </div>
         {joinGroup && <p className="join-hint">🔗 합석 중: {joinGroup.join("·")}번 (타이머·금액 통합)</p>}
+        {joinGroupOver && (
+          <p className="join-error">
+            ⚠ 이용 시간 초과 — 주문하면 합석 {joinGroup.join("·")}번 전체 타이머가 다시 시작됩니다. 연장 여부를 먼저 확인하세요.
+          </p>
+        )}
         <span className={`conn ${connected ? "ok" : ""}`}>{connected ? "연결됨" : "연결 끊김"}</span>
       </div>
 

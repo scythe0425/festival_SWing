@@ -313,7 +313,7 @@ rsync -av -e "ssh -i ~/festival-swing-key.pem" --delete \
 
 # 3. 서버 파일 배포 (-R: server/, shared/ 폴더 구조 유지 — 없으면 최상위에 평탄화되어 복사됨)
 rsync -avR -e "ssh -i ~/festival-swing-key.pem" \
-  server/index.js shared/menu.js \
+  server/ shared/ \
   ubuntu@13.125.114.50:/home/ubuntu/festival_SWing/
 
 # 4. 재시작 + 로그 확인

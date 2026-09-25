@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAppSocket } from "../context/SocketContext.jsx";
+import { TABLE_COUNT, isValidTable } from "@shared/tables.js";
 
-/** 파라솔 테이블 56개 + 여유분 책상 4개 */
-const TABLE_COUNT = 60;
 const ALL_TABLES = Array.from({ length: TABLE_COUNT }, (_, i) => String(i + 1));
+/** 종료 20분 전부터 강조 — 연장 여부 확인 · 대기 손님 안내 시점 */
+const SOON_MS = 20 * 60 * 1000;
 
 function formatHM(ts) {
   return new Date(ts).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** 남은 시간 H:MM */
+function formatRemain(ms) {
+  const m = Math.max(0, Math.floor(ms / 60000));
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
 }
 
 function formatHMS(ms) {
@@ -27,6 +34,8 @@ export default function SystemPage() {
   const [joinTable, setJoinTable] = useState(null);
   const [joinInput, setJoinInput] = useState("");
   const [joinError, setJoinError] = useState("");
+  /** input: 번호 입력 → preview: 결과 확인 후 확정 / unjoin: 해제 확인 */
+  const [joinStep, setJoinStep] = useState("input");
 
   const handleReset = useCallback((table) => {
     socket.emit("system:resetTable", table);
@@ -69,7 +78,8 @@ export default function SystemPage() {
       const limitMs = limitMin * 60 * 1000;
       const over = elapsed >= limitMs;
       const remaining = Math.max(0, limitMs - elapsed);
-      return { table, active: true, remaining, over, limitMin, partySize, depositors, totalAmount, group };
+      const soon = !over && remaining <= SOON_MS;
+      return { table, active: true, remaining, over, soon, limitMin, partySize, depositors, totalAmount, group };
     });
   }, [state?.tables, groupOf, defaultLimit, clock]);
 
@@ -77,12 +87,60 @@ export default function SystemPage() {
     setJoinTable(null);
     setJoinInput("");
     setJoinError("");
+    setJoinStep("input");
+  };
+
+  /** "4, 5 6" → ["4", "5", "6"] (중복 제거) */
+  const joinTargets = [...new Set(joinInput.split(/\D+/).filter(Boolean).map((t) => String(Number(t))))];
+
+  /** 입력 확인 후 미리보기 단계로 */
+  const handleJoinNext = () => {
+    const invalid = joinTargets.filter((t) => !isValidTable(t));
+    if (invalid.length) return setJoinError(`1~${TABLE_COUNT}번만 입력할 수 있습니다: ${invalid.join(", ")}`);
+    if (joinTargets.includes(joinTable)) return setJoinError(`${joinTable}번 자신은 입력하지 않아도 됩니다.`);
+    const alreadyJoined = joinTargets.filter((t) => groupOf(joinTable).includes(t));
+    if (alreadyJoined.length === joinTargets.length) return setJoinError(`이미 합석 중인 테이블입니다: ${alreadyJoined.join(", ")}`);
+    setJoinError("");
+    setJoinStep("preview");
+  };
+
+  /** 합석 결과 미리보기: 최종 그룹과 테이블별 경고 */
+  const buildJoinPreview = () => {
+    const now = Date.now();
+    const limitMs = defaultLimit * 60 * 1000;
+    const myGroup = groupOf(joinTable);
+    const merged = [...new Set([joinTable, ...joinTargets].flatMap((t) => groupOf(t)))].sort((a, b) => Number(a) - Number(b));
+    const starts = merged.map((t) => state?.tables?.[t]?.timerStartedAt).filter((v) => v != null);
+    const earliest = starts.length ? Math.min(...starts) : null;
+    const rows = merged.map((t) => {
+      const start = state?.tables?.[t]?.timerStartedAt ?? null;
+      const warnings = [];
+      const curGroup = groupOf(t);
+      if (curGroup.length >= 2 && !myGroup.includes(t)) {
+        warnings.push(`이미 ${curGroup.join("·")}번 합석 중 — 그룹 전체가 합쳐집니다`);
+      }
+      if (start == null) {
+        warnings.push(earliest != null ? "빈 테이블 — 지금부터 이용 중으로 바뀝니다" : "빈 테이블");
+      } else if (earliest != null && start - earliest >= 60000) {
+        const before = limitMs - (now - start);
+        const after = limitMs - (now - earliest);
+        warnings.push(
+          `남은 시간 ${formatRemain(before)} → ${formatRemain(after)} (${Math.round((start - earliest) / 60000)}분 줄어듦)`
+        );
+      }
+      const status = start == null ? "빈 테이블" : `남은 ${formatRemain(limitMs - (now - start))}`;
+      return { table: t, status, warnings };
+    });
+    return { merged, rows, warnCount: rows.filter((r) => r.warnings.length > 0).length };
   };
 
   const handleJoin = () => {
-    socket.emit("table:join", { table: joinTable, other: joinInput }, (res) => {
+    socket.emit("table:join", { table: joinTable, others: joinTargets }, (res) => {
       if (res?.ok) closeJoin();
-      else setJoinError(res?.error ?? "합석에 실패했습니다.");
+      else {
+        setJoinError(res?.error ?? "합석에 실패했습니다.");
+        setJoinStep("input");
+      }
     });
   };
 
@@ -109,33 +167,87 @@ export default function SystemPage() {
       )}
       {joinTable && (() => {
         const group = groupOf(joinTable);
+        if (joinStep === "unjoin") {
+          const rest = group.filter((t) => t !== joinTable);
+          return (
+            <div className="modal-backdrop" role="presentation" onClick={closeJoin}>
+              <div className="modal-panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                <h2 className="modal-title">{joinTable}번 합석 해제</h2>
+                <p className="modal-body">
+                  {joinTable}번을 합석({group.join("·")}번)에서 뺄까요? 타이머는 합석 전으로 돌아갑니다. (합석 중 시간이 초과돼 다시 시작된 경우에는 현재 타이머 유지)
+                </p>
+                {rest.length === 1 && <p className="modal-body">남은 {rest[0]}번 혼자가 되므로 합석이 모두 풀립니다.</p>}
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={() => setJoinStep("input")}>뒤로</button>
+                  <button type="button" className="btn-danger" onClick={handleUnjoin}>해제</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        if (joinStep === "preview") {
+          const { merged, rows, warnCount } = buildJoinPreview();
+          return (
+            <div className="modal-backdrop" role="presentation" onClick={closeJoin}>
+              <div className="modal-panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                <h2 className="modal-title">합석 확인</h2>
+                <p className="modal-body">
+                  합석 결과: <strong>{merged.join("·")}번</strong> ({merged.length}개 테이블)
+                </p>
+                <ul className="join-preview">
+                  {rows.map((r) => (
+                    <li key={r.table} className={r.warnings.length ? "join-preview-row join-preview-row--warn" : "join-preview-row"}>
+                      <span className="join-preview-head">
+                        <strong>{r.table}번</strong>
+                        <span className="muted">{r.status}</span>
+                      </span>
+                      {r.warnings.map((w) => (
+                        <span key={w} className="join-preview-warn">⚠ {w}</span>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+                {warnCount > 0 && (
+                  <p className="join-error">⚠ 표시된 테이블 번호가 맞는지 손님께 다시 확인하세요.</p>
+                )}
+                {joinError && <p className="join-error">{joinError}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={() => setJoinStep("input")}>뒤로</button>
+                  <button type="button" className="btn-primary" onClick={handleJoin}>확정</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="modal-backdrop" role="presentation" onClick={closeJoin}>
             <div className="modal-panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
               <h2 className="modal-title">{joinTable}번 테이블 합석</h2>
               {group.length >= 2 && <p className="modal-body">현재 합석: {group.join("·")}번</p>}
               <p className="modal-body">
-                합석할 테이블 번호를 입력하세요. 타이머는 가장 먼저 입장한 테이블 기준으로 맞춰지고, 인원·금액은 합산 표시됩니다.
+                합석할 테이블 번호를 입력하세요. 여러 개는 쉼표나 띄어쓰기로 구분합니다 (예: 4, 5, 6). 다음 화면에서 결과를 확인한 뒤 확정합니다.
               </p>
               <input
                 type="text"
-                inputMode="numeric"
                 autoComplete="off"
-                placeholder="테이블 번호"
+                placeholder="예: 4, 5, 6"
                 value={joinInput}
                 onChange={(e) => {
-                  setJoinInput(e.target.value.replace(/\D/g, ""));
+                  setJoinInput(e.target.value.replace(/[^\d,\s]/g, ""));
                   setJoinError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && joinTargets.length > 0) handleJoinNext();
                 }}
                 className="field-input"
               />
               {joinError && <p className="join-error">{joinError}</p>}
               <div className="modal-actions">
                 {group.length >= 2 && (
-                  <button type="button" className="btn-danger" onClick={handleUnjoin}>이 테이블 합석 해제</button>
+                  <button type="button" className="btn-danger" onClick={() => setJoinStep("unjoin")}>이 테이블 합석 해제</button>
                 )}
                 <button type="button" className="btn-secondary" onClick={closeJoin}>취소</button>
-                <button type="button" className="btn-primary" disabled={!joinInput} onClick={handleJoin}>합석</button>
+                <button type="button" className="btn-primary" disabled={joinTargets.length === 0} onClick={handleJoinNext}>다음</button>
               </div>
             </div>
           </div>
@@ -205,8 +317,13 @@ export default function SystemPage() {
         </h2>
 
         <div className="table-grid">
-          {tableData.map(({ table, active, remaining, over, limitMin, partySize, depositors, totalAmount, group }) => (
-            <div key={table} className={`table-card ${active ? (over ? "table-card--over" : "table-card--active") : "table-card--empty"}`}>
+          {tableData.map(({ table, active, remaining, over, soon, limitMin, partySize, depositors, totalAmount, group }) => (
+            <div
+              key={table}
+              className={`table-card ${
+                active ? (over ? "table-card--over" : soon ? "table-card--soon" : "table-card--active") : "table-card--empty"
+              }`}
+            >
               <div className="tc-header">
                 <div className="tc-header-row">
                   <span className="tc-num">{table}번</span>
@@ -231,8 +348,12 @@ export default function SystemPage() {
                     </div>
                   )}
                 </div>
-                <span className={`tc-status ${active ? (over ? "tc-status--over" : "tc-status--active") : "tc-status--empty"}`}>
-                  {active ? (over ? "시간초과" : "이용 중") : "빈 테이블"}
+                <span
+                  className={`tc-status ${
+                    active ? (over ? "tc-status--over" : soon ? "tc-status--soon" : "tc-status--active") : "tc-status--empty"
+                  }`}
+                >
+                  {active ? (over ? "시간초과" : soon ? "종료 20분 전" : "이용 중") : "빈 테이블"}
                 </span>
                 {active && group.length >= 2 && <span className="tc-join-badge">🔗 합석 {group.join("·")}번</span>}
               </div>

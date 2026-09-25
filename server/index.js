@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { MENU_LIST, COVER_MENU_ID, GAME_MENU_ID, expandKitchenLines } from "../shared/menu.js";
+import { TABLE_COUNT, isValidTable } from "../shared/tables.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3002;
@@ -192,10 +193,26 @@ function groupOf(table) {
   return state.joinGroups.find((g) => g.includes(table)) ?? [table];
 }
 
+/**
+ * 합석으로 바뀌기 전 타이머로 되돌림.
+ * preJoinTimer가 null이면 합석 때 빈 테이블이었던 것 — 그동안 주문이 없으면 다시 빈 테이블로.
+ */
+function restorePreJoinTimer(table) {
+  const ts = state.tables[table];
+  if (!ts || !("preJoinTimer" in ts)) return;
+  if (ts.preJoinTimer != null) ts.timerStartedAt = ts.preJoinTimer;
+  else if (!ts.orderHistory?.length) ts.timerStartedAt = null;
+  delete ts.preJoinTimer;
+}
+
+/** 테이블을 그룹에서 빼고, 그 때문에 혼자 남은 테이블까지 합석 전 타이머로 복원 */
 function removeFromJoinGroups(table) {
+  const before = new Set(state.joinGroups.flat());
   state.joinGroups = state.joinGroups
     .map((g) => g.filter((t) => t !== table))
     .filter((g) => g.length >= 2);
+  const after = new Set(state.joinGroups.flat());
+  for (const t of before) if (!after.has(t)) restorePreJoinTimer(t);
 }
 
 /**
@@ -269,6 +286,8 @@ function submitOrder(tableRaw, items, partySize, depositor) {
     for (const t of members) {
       if (!state.tables[t]) state.tables[t] = defaultTableState();
       state.tables[t].timerStartedAt = now;
+      /* 새로 시작(연장)한 타이머는 합석 해제 시에도 되돌리지 않음 */
+      delete state.tables[t].preJoinTimer;
     }
   }
 
@@ -352,31 +371,39 @@ io.on("connection", (socket) => {
     broadcastState();
   });
 
-  /** 합석: 두 테이블(또는 이미 합석 중인 그룹)을 한 그룹으로 묶고 타이머를 가장 이른 시작 시각으로 맞춤 */
+  /** 합석: 테이블 여러 개(또는 이미 합석 중인 그룹)를 한 그룹으로 묶고 타이머를 가장 이른 시작 시각으로 맞춤 */
   socket.on("table:join", (payload, ack) => {
     const a = String(payload?.table ?? "").trim();
-    const b = String(payload?.other ?? "").trim();
+    /* others: 여러 테이블, other: 새로고침 전 구버전 화면 호환 */
+    const rawOthers = Array.isArray(payload?.others) ? payload.others : [payload?.other];
+    const others = [...new Set(rawOthers.map((t) => String(t ?? "").trim()).filter(Boolean))];
     const fail = (error) => {
       if (typeof ack === "function") ack({ ok: false, error });
     };
-    if (!a || !b) return fail("테이블 번호를 입력하세요.");
-    if (a === b) return fail("같은 테이블은 합석할 수 없습니다.");
-    const merged = [...new Set([...groupOf(a), ...groupOf(b)])].sort((x, y) => Number(x) - Number(y));
-    state.joinGroups = state.joinGroups.filter((g) => !g.includes(a) && !g.includes(b));
+    if (!a || others.length === 0) return fail("테이블 번호를 입력하세요.");
+    if (others.includes(a)) return fail("같은 테이블은 합석할 수 없습니다.");
+    const invalid = [a, ...others].filter((t) => !isValidTable(t));
+    if (invalid.length) return fail(`1~${TABLE_COUNT}번 테이블만 합석할 수 있습니다: ${invalid.join(", ")}`);
+    const targets = [a, ...others];
+    const merged = [...new Set(targets.flatMap((t) => groupOf(t)))].sort((x, y) => Number(x) - Number(y));
+    state.joinGroups = state.joinGroups.filter((g) => !g.some((t) => targets.includes(t)));
     state.joinGroups.push(merged);
     const starts = merged.map((t) => state.tables[t]?.timerStartedAt).filter((v) => v != null);
     if (starts.length) {
       const earliest = Math.min(...starts);
       for (const t of merged) {
         if (!state.tables[t]) state.tables[t] = defaultTableState();
-        state.tables[t].timerStartedAt = earliest;
+        const ts = state.tables[t];
+        /* 처음 합석될 때의 타이머만 기억(그룹이 커져도 원래 값 유지) */
+        if (ts.timerStartedAt !== earliest && !("preJoinTimer" in ts)) ts.preJoinTimer = ts.timerStartedAt;
+        ts.timerStartedAt = earliest;
       }
     }
     broadcastState();
     if (typeof ack === "function") ack({ ok: true });
   });
 
-  /** 합석 해제: 해당 테이블만 그룹에서 빠짐(타이머·금액은 테이블별로 그대로) */
+  /** 합석 해제: 해당 테이블만 그룹에서 빠지고 합석 전 타이머로 복원(합석 중 연장됐으면 유지) */
   socket.on("table:unjoin", (tableRaw) => {
     const table = String(tableRaw ?? "").trim();
     if (!table) return;

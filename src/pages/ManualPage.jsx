@@ -90,7 +90,7 @@ export default function ManualPage() {
           </p>
           <ol className="manual-list manual-list--ol">
             <li>자리가 없으면 <strong>번호표</strong>를 주고 대기명단에 등록 — 줄만 세우면 공간이 막히므로 번호표 + 현장 대기 방식</li>
-            <li>이용 종료 <strong>20분 전</strong>인 테이블 확인</li>
+            <li>이용 종료 <strong>20분 전</strong>인 테이블 확인 — 테이블 현황에서 <strong>주황색</strong> 카드</li>
             <li>해당 테이블에 연장 여부 질문</li>
             <li>연장하지 않으면 대기 손님에게 <strong>예상 입장시간</strong> 안내</li>
             <li>자리가 나면 순서대로 입장</li>
@@ -112,6 +112,7 @@ export default function ManualPage() {
               <ul className="manual-list manual-list--sub">
                 <li>입력 전 반드시 실제 테이블 번호 확인 — 잘못 입력하면 타이머가 엉뚱한 테이블에 시작됨</li>
                 <li>합석 중인 테이블이면 입력칸 아래 <strong>🔗 합석 중: 3·4번</strong> 안내 표시</li>
+                <li>합석 그룹이 시간 초과 상태면 <strong>그룹 전체 타이머 재시작</strong> 경고 표시 — 연장 여부 확인 후 주문</li>
               </ul>
             </li>
             <li>
@@ -229,6 +230,7 @@ export default function ManualPage() {
               카드 색상으로 상태 구분
               <ul className="manual-list manual-list--sub">
                 <li><strong>파란 테두리</strong> — 이용 중 (제한 시간 내)</li>
+                <li><strong>주황 테두리 + 종료 20분 전</strong> — 남은 시간 20분 이하 · 연장 여부 확인 시점</li>
                 <li><strong>빨간 테두리 + 시간초과</strong> — 제한 시간 초과</li>
                 <li><strong>회색</strong> — 빈 테이블</li>
               </ul>
@@ -249,10 +251,19 @@ export default function ManualPage() {
             <li>
               <strong>합석</strong> 버튼 — 다른 테이블과 합석 지정
               <ul className="manual-list manual-list--sub">
-                <li>합석할 테이블 번호 입력 후 <strong>합석</strong> — 카드에 <strong>🔗 합석 3·4번</strong> 표시</li>
+                <li>합석할 테이블 번호 입력(1~60) 후 <strong>다음</strong> — 여러 개는 쉼표나 띄어쓰기로 한 번에 입력 (예: 4, 5, 6)</li>
+                <li>
+                  <strong>합석 확인</strong> 화면에서 결과 그룹과 ⚠ 경고를 확인한 뒤 <strong>확정</strong> — 카드에 <strong>🔗 합석 3·4·5·6번</strong> 표시
+                  <ul className="manual-list manual-list--sub">
+                    <li>⚠ 남은 시간 줄어듦 — 늦게 온 테이블은 먼저 온 테이블 기준으로 시간이 줄어듦</li>
+                    <li>⚠ 이미 다른 합석 중 — 그 그룹 전체가 함께 합쳐짐</li>
+                    <li>⚠ 빈 테이블 — 확정하면 이용 중으로 바뀜</li>
+                    <li>⚠ 가 있으면 번호가 맞는지 손님께 다시 확인</li>
+                  </ul>
+                </li>
                 <li>타이머는 <strong>가장 먼저 입장한 테이블 기준</strong>으로 통일, 인원 · 금액 · 입금자는 합산 표시</li>
                 <li>합석 중 내역 버튼은 합석 테이블 전체 주문을 테이블 번호와 함께 표시</li>
-                <li>잘못 지정한 경우 같은 버튼 → <strong>이 테이블 합석 해제</strong></li>
+                <li>잘못 지정한 경우 같은 버튼 → <strong>이 테이블 합석 해제</strong> → 확인 — 타이머는 합석 전으로 복원 (합석 중 시간 초과로 재시작된 경우는 유지)</li>
               </ul>
             </li>
             <li>

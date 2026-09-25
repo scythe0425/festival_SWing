@@ -1403,6 +1403,11 @@ a.reservation-call {
   background: rgba(61, 156, 245, 0.07);
 }
 
+.table-card--soon {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
 .table-card--over {
   border-color: var(--danger);
   background: var(--warn-bg);
@@ -1448,6 +1453,11 @@ a.reservation-call {
   color: var(--accent);
 }
 
+.tc-status--soon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
 .tc-status--over {
   background: var(--warn-bg);
   color: var(--danger);
@@ -1476,6 +1486,44 @@ a.reservation-call {
 
 .join-hint {
   color: var(--accent);
+}
+
+.join-preview {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.join-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.join-preview-row--warn {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.join-preview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.join-preview-warn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f59e0b;
 }
 
 .join-error {
