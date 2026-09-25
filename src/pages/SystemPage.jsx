@@ -33,18 +33,17 @@ export default function SystemPage() {
     return () => clearInterval(id);
   }, []);
 
-  const defaultLimit = state?.settings?.defaultLimitMinutes ?? 90;
+  const defaultLimit = state?.settings?.defaultLimitMinutes ?? 120;
 
   const tableData = useMemo(() => {
     const now = Date.now();
     return ALL_TABLES.map((table) => {
       const t = state?.tables?.[table];
       if (!t || t.timerStartedAt == null) return { table, active: false };
-      const bonus = Math.max(0, Math.floor(Number(t.bonusLimitMinutes) || 0));
       const partySize = Math.max(0, Math.floor(Number(t.partySize) || 0));
       const depositors = String(t.depositors ?? "") || String(t.depositor ?? "");
       const totalAmount = Math.max(0, Math.floor(Number(t.totalAmount) || 0));
-      const limitMin = defaultLimit + bonus;
+      const limitMin = defaultLimit;
       const elapsed = now - t.timerStartedAt;
       const limitMs = limitMin * 60 * 1000;
       const over = elapsed >= limitMs;

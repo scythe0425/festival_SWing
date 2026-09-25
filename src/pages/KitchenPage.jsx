@@ -67,7 +67,7 @@ export default function KitchenPage() {
               </header>
               <ul className="kc-items">
                 {o.items.map((it, i) => {
-                  const status = it.status ?? (it.done ? "done" : "pending");
+                  const status = it.status;
                   return (
                     <li key={it.lineKey ?? `${o.id}-${i}`} className={itemClass(status)}>
                       <span className="kc-item-name">{it.name}</span>

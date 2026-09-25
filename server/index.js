@@ -1,6 +1,6 @@
 /**
  * 주점 주문 관리 — Express + Socket.io 서버
- * 상태는 전부 인메모리이며 재시작 시 초기화됩니다.
+ * 상태는 인메모리로 관리하며 STATE_FILE(JSON)에 저장해 재시작 시 복구합니다.
  */
 
 import express from "express";
@@ -30,23 +30,22 @@ const io = new Server(server, {
     : undefined,
 });
 
-/** @typedef {{ menuId: number, name: string, price: number, qty: number, done?: boolean, lineKey?: string }} OrderLine */
+/** @typedef {{ menuId: number, name: string, price: number, qty: number, status: "pending" | "done" | "served", lineKey?: string }} OrderLine */
 /** @typedef {{ id: string, table: string, items: OrderLine[], createdAt: number }} KitchenOrder */
 
-/** @type {{ timerStartedAt: number | null, bonusLimitMinutes: number, coverQty: number, partySize: number, depositor: string, depositors: string, totalAmount: number, orderHistory: Array<{items: Array<{name:string,price:number,qty:number}>, subtotal:number, createdAt:number}> }} */
-const defaultTableState = () => ({ timerStartedAt: null, bonusLimitMinutes: 0, coverQty: 0, partySize: 0, depositor: "", depositors: "", totalAmount: 0, orderHistory: [] });
+/** @typedef {{ timerStartedAt: number | null, coverQty: number, partySize: number, depositor: string, depositors: string, totalAmount: number, orderHistory: Array<{items: Array<{name:string,price:number,qty:number}>, subtotal:number, createdAt:number}> }} TableState */
+/** @returns {TableState} */
+const defaultTableState = () => ({ timerStartedAt: null, coverQty: 0, partySize: 0, depositor: "", depositors: "", totalAmount: 0, orderHistory: [] });
 
 /** 서버 단일 상태 */
 const state = {
   soldOutIds: new Set(),
   kitchenQueue: /** @type {KitchenOrder[]} */ ([]),
-  /** 테이블별: timerStartedAt 고정, bonusLimitMinutes는 「시간 연장」마다 extensionMinutes만큼 가산, coverQty는 접수된 자릿세 수량 합 */
-  tables: /** @type {Record<string, { timerStartedAt: number | null, bonusLimitMinutes: number, coverQty: number }>} */ ({}),
+  /** 테이블별: timerStartedAt은 첫 주문 시각, coverQty는 접수된 자릿세 수량 합 */
+  tables: /** @type {Record<string, TableState>} */ ({}),
   settings: {
     /** 경고까지 기본 허용 시간(분) */
     defaultLimitMinutes: 120,
-    /** 「시간 연장」 한 번당 제한 시간에 더해지는 분(타이머는 그대로) */
-    extensionMinutes: 60,
   },
   /** 매출 집계: 「주문 완료」 접수 기준(state.json에 영속 저장) */
   salesStats: {
@@ -57,7 +56,6 @@ const state = {
     orderSubmitCount: 0,
   },
   reservations: /** @type {{ id: string, name: string, partySize: number, phone: string, createdAt: number }[]} */ ([]),
-  eventGames: /** @type {{ id: string, depositor: string, amount: number, createdAt: number }[]} */ ([]),
 };
 
 function randomId() {
@@ -78,23 +76,13 @@ function getSnapshot() {
   return {
     menu: MENU_LIST,
     soldOutIds: [...state.soldOutIds],
-    kitchenQueue: state.kitchenQueue.map((o) => ({
-      ...o,
-      items: o.items.map((i) => ({
-        ...i,
-        done: Boolean(i.done),
-        status: i.status ?? (i.done ? "done" : "pending"),
-        lineKey: i.lineKey ?? null,
-      })),
-    })),
+    kitchenQueue: state.kitchenQueue,
     tables: Object.fromEntries(
       Object.entries(state.tables).map(([k, v]) => {
-        const bonus = Math.max(0, Math.floor(Number(v.bonusLimitMinutes) || 0));
         return [
           k,
           {
             timerStartedAt: v.timerStartedAt,
-            bonusLimitMinutes: bonus,
             coverQty: Math.max(0, Math.floor(Number(v.coverQty) || 0)),
             partySize: Math.max(0, Math.floor(Number(v.partySize) || 0)),
             depositor: String(v.depositor ?? ""),
@@ -121,7 +109,6 @@ function getSnapshot() {
       orderSubmitCount: state.salesStats.orderSubmitCount,
     },
     reservations: state.reservations.map((r) => ({ ...r })),
-    eventGames: state.eventGames.map((g) => ({ ...g })),
   };
 }
 
@@ -139,7 +126,6 @@ function saveState() {
         settings: state.settings,
         salesStats: state.salesStats,
         reservations: state.reservations,
-        eventGames: state.eventGames,
       }),
       "utf8"
     );
@@ -154,12 +140,20 @@ function loadState() {
     if (!fs.existsSync(STATE_FILE)) return;
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
     if (Array.isArray(raw.soldOutIds)) state.soldOutIds = new Set(raw.soldOutIds);
-    if (Array.isArray(raw.kitchenQueue)) state.kitchenQueue = raw.kitchenQueue;
+    if (Array.isArray(raw.kitchenQueue)) {
+      state.kitchenQueue = raw.kitchenQueue;
+      /* 구버전 저장 파일: done(boolean) → status로 변환 */
+      for (const o of state.kitchenQueue) {
+        for (const it of o.items ?? []) {
+          if (!it.status) it.status = it.done ? "done" : "pending";
+          delete it.done;
+        }
+      }
+    }
     if (raw.tables && typeof raw.tables === "object") state.tables = raw.tables;
     if (raw.settings?.defaultLimitMinutes) state.settings.defaultLimitMinutes = raw.settings.defaultLimitMinutes;
     if (raw.salesStats) state.salesStats = { ...state.salesStats, ...raw.salesStats };
     if (Array.isArray(raw.reservations)) state.reservations = raw.reservations;
-    if (Array.isArray(raw.eventGames)) state.eventGames = raw.eventGames;
     console.log("[state] 저장된 상태를 복구했습니다.");
   } catch (e) {
     console.error("[state] 복구 실패, 초기 상태로 시작:", e.message);
@@ -242,7 +236,7 @@ function submitOrder(tableRaw, items, partySize, depositor) {
     const order = {
       id: randomId(),
       table,
-      items: flatLines.map((i) => ({ ...i, done: false, lineKey: randomId() })),
+      items: flatLines.map((i) => ({ ...i, status: "pending", lineKey: randomId() })),
       createdAt: Date.now(),
     };
     state.kitchenQueue.push(order);
@@ -250,16 +244,24 @@ function submitOrder(tableRaw, items, partySize, depositor) {
 
   if (ts.timerStartedAt == null) {
     ts.timerStartedAt = Date.now();
-  } else {
-    const defaultLimit = Math.max(1, Math.floor(Number(state.settings.defaultLimitMinutes) || 90));
-    const limitMs = (defaultLimit + Math.max(0, Math.floor(Number(ts.bonusLimitMinutes) || 0))) * 60 * 1000;
-    if (Date.now() - ts.timerStartedAt >= limitMs) {
-      ts.timerStartedAt = Date.now();
-      ts.bonusLimitMinutes = 0;
-    }
+  } else if (Date.now() - ts.timerStartedAt >= state.settings.defaultLimitMinutes * 60 * 1000) {
+    ts.timerStartedAt = Date.now();
   }
 
   return { ok: true };
+}
+
+/** 주방 라인 찾기: lineKey 우선, 없으면 lineIndex(구버전 데이터용) */
+function findKitchenLine(payload) {
+  const order = state.kitchenQueue.find((o) => o.id === payload?.orderId);
+  if (!order?.items?.length) return null;
+  const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
+  if (lineKey) {
+    const line = order.items.find((it) => it.lineKey === lineKey);
+    if (line) return line;
+  }
+  const n = parseInt(String(payload?.lineIndex), 10);
+  return Number.isInteger(n) && n >= 0 && n < order.items.length ? order.items[n] : null;
 }
 
 io.on("connection", (socket) => {
@@ -285,69 +287,25 @@ io.on("connection", (socket) => {
     if (!res.ok && res.error) socket.emit("error:toast", res.error);
   });
 
-  /** 메뉴(라인) 단위 조리 완료 — 해당 줄만 완료 처리, 모두 완료 시 카드 제거 */
+  /** 메뉴(라인) 단위 조리 완료: pending → done */
   socket.on("kitchen:completeLine", (payload) => {
-    const orderId = payload?.orderId;
-    const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
-    const order = state.kitchenQueue.find((o) => o.id === orderId);
-    if (!order?.items?.length) return;
-
-    let idx = -1;
-    if (lineKey) {
-      idx = order.items.findIndex((it) => it.lineKey === lineKey);
-    }
-    if (idx < 0 && payload?.lineIndex !== undefined && payload?.lineIndex !== null && payload?.lineIndex !== "") {
-      const n = parseInt(String(payload.lineIndex), 10);
-      if (Number.isInteger(n) && n >= 0 && n < order.items.length) idx = n;
-    }
-    if (idx < 0) return;
-
-    for (const it of order.items) {
-      if (it.done !== true && it.done !== false) it.done = false;
-    }
-
-    const line = order.items[idx];
-    if (!line || line.status === "done" || line.status === "served") return;
-    line.done = true;
+    const line = findKitchenLine(payload);
+    if (!line || line.status !== "pending") return;
     line.status = "done";
-
     broadcastState();
   });
 
+  /** 되돌리기: 어떤 상태든 pending으로 */
   socket.on("kitchen:uncompleteLine", (payload) => {
-    const orderId = payload?.orderId;
-    const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
-    const order = state.kitchenQueue.find((o) => o.id === orderId);
-    if (!order?.items?.length) return;
-
-    let idx = -1;
-    if (lineKey) idx = order.items.findIndex((it) => it.lineKey === lineKey);
-    if (idx < 0 && payload?.lineIndex !== undefined) {
-      const n = parseInt(String(payload.lineIndex), 10);
-      if (Number.isInteger(n) && n >= 0 && n < order.items.length) idx = n;
-    }
-    if (idx < 0) return;
-
-    order.items[idx].done = false;
-    order.items[idx].status = "pending";
+    const line = findKitchenLine(payload);
+    if (!line) return;
+    line.status = "pending";
     broadcastState();
   });
 
+  /** 서빙 완료: done → served */
   socket.on("kitchen:serveLine", (payload) => {
-    const orderId = payload?.orderId;
-    const lineKey = typeof payload?.lineKey === "string" ? payload.lineKey : "";
-    const order = state.kitchenQueue.find((o) => o.id === orderId);
-    if (!order?.items?.length) return;
-
-    let idx = -1;
-    if (lineKey) idx = order.items.findIndex((it) => it.lineKey === lineKey);
-    if (idx < 0 && payload?.lineIndex !== undefined) {
-      const n = parseInt(String(payload.lineIndex), 10);
-      if (Number.isInteger(n) && n >= 0 && n < order.items.length) idx = n;
-    }
-    if (idx < 0) return;
-
-    const line = order.items[idx];
+    const line = findKitchenLine(payload);
     if (!line || line.status !== "done") return;
     line.status = "served";
     broadcastState();
@@ -380,12 +338,11 @@ io.on("connection", (socket) => {
       orderSubmitCount: 0,
     };
     state.reservations = [];
-    state.eventGames = [];
     broadcastState();
   });
 
   socket.on("system:setDefaultLimitMinutes", (minutes) => {
-    state.settings.defaultLimitMinutes = Math.max(1, Math.floor(Number(minutes) || 90));
+    state.settings.defaultLimitMinutes = Math.max(1, Math.floor(Number(minutes) || 120));
     broadcastState();
   });
 
@@ -422,16 +379,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("eventGame:delete", (id) => {
-    const rid = String(id ?? "").trim();
-    if (!rid) return;
-    const idx = state.eventGames.findIndex((g) => g.id === rid);
-    if (idx >= 0) {
-      state.eventGames.splice(idx, 1);
-      broadcastState();
-    }
-  });
-
   socket.on("kitchen:deleteOrder", (orderId) => {
     const id = String(orderId ?? "").trim();
     if (!id) return;
@@ -440,22 +387,6 @@ io.on("connection", (socket) => {
       state.kitchenQueue.splice(idx, 1);
       broadcastState();
     }
-  });
-
-  socket.on("eventGame:submit", (payload, ack) => {
-    const depositor = String(payload?.depositor ?? "").trim().slice(0, 40);
-    const qty = Math.max(0, Math.floor(Number(payload?.qty) || 0));
-    const fail = (error) => { if (typeof ack === "function") ack({ ok: false, error }); };
-    if (!depositor) return fail("입금자를 입력하세요.");
-    if (qty < 1) return fail("수량을 선택하세요.");
-    const amount = qty * 1000;
-    state.eventGames.push({ id: randomId(), depositor, amount, createdAt: Date.now() });
-    const prev = state.salesStats.byMenuId[GAME_MENU_ID] || { qty: 0, revenue: 0 };
-    state.salesStats.byMenuId[GAME_MENU_ID] = { qty: prev.qty + qty, revenue: prev.revenue + amount };
-    state.salesStats.totalRevenue += amount;
-    state.salesStats.orderSubmitCount += 1;
-    broadcastState();
-    if (typeof ack === "function") ack({ ok: true });
   });
 });
 
