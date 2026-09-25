@@ -12,13 +12,14 @@ export const MENU_LIST = [
   { id: 12, name: "기본 안주", price: 1000, category: "기타" },
   { id: GAME_MENU_ID, name: "이벤트 게임", price: 1000, category: "기타", gameOnly: true },
   /* 메인 */
-  { id: 5, name: "닭강정", price: 18000, category: "메인" },
-  { id: 6, name: "제육", price: 18000, category: "메인" },
-  { id: 7, name: "소세지 나초", price: 18000, category: "메인" },
+  { id: 5, name: "함박스테이크", price: 19000, category: "메인" },
+  { id: 6, name: "커리부어스트", price: 19000, category: "메인" },
+  { id: 7, name: "또띠아 피자", price: 19000, category: "메인" },
   /* 사이드 */
-  { id: 8, name: "콘치즈", price: 11000, category: "사이드" },
-  { id: 9, name: "오지치즈 후라이", price: 11000, category: "사이드" },
-  { id: 10, name: "주먹밥", price: 8000, category: "사이드" },
+  { id: 8, name: "소세지불닭", price: 15000, category: "사이드" },
+  { id: 9, name: "콘치즈", price: 11000, category: "사이드" },
+  { id: 10, name: "카나페", price: 11000, category: "사이드" },
+  { id: 14, name: "파인애플 샤베트", price: 11000, category: "사이드" },
 ];
 
 /**

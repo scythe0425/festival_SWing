@@ -111,7 +111,7 @@ async function run() {
         "order:submit",
         {
           table: tableNum,
-          quantities: { 5: 1 }, // 닭강정 1개
+          quantities: { 5: 1 }, // 함박스테이크 1개
           partySize: 2,
           depositor: `테스터${i + 1}`,
           submitId,
@@ -154,7 +154,7 @@ async function run() {
     // 트리거: 추가 주문 1건
     sockets[0]?.emit("order:submit", {
       table: "99",
-      quantities: { 6: 1 }, // 제육 1개
+      quantities: { 6: 1 }, // 커리부어스트 1개
       partySize: 1,
       depositor: "브로드캐스트테스트",
       submitId: `bcast-${Date.now()}`,

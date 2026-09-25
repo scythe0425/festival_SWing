@@ -631,6 +631,11 @@ select:focus {
   font-weight: 700;
 }
 
+.soldout-qty {
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  font-variant-numeric: tabular-nums;
+}
+
 .soldout-flag {
   font-size: clamp(0.85rem, 2.5vw, 1rem);
   color: var(--muted);

@@ -5,6 +5,11 @@ export default function SettingsPage() {
   const { socket, connected, state } = useAppSocket();
   const menu = state?.menu ?? [];
   const soldSet = useMemo(() => new Set(state?.soldOutIds ?? []), [state?.soldOutIds]);
+  /** menuId -> 누적 판매 수량(주문 완료 기준) */
+  const soldQty = useMemo(
+    () => new Map((state?.salesStats?.menuLines ?? []).map((l) => [l.menuId, l.qty])),
+    [state?.salesStats?.menuLines]
+  );
 
   const defaultLimit = state?.settings?.defaultLimitMinutes ?? 120;
   const [defaultInput, setDefaultInput] = useState(String(defaultLimit));
@@ -65,6 +70,7 @@ export default function SettingsPage() {
                 onClick={() => socket.emit("kitchen:soldOut:toggle", m.id)}
               >
                 <span className="soldout-name">{m.name}</span>
+                <span className="soldout-qty">판매 {soldQty.get(m.id) ?? 0}개</span>
                 <span className="soldout-flag">{on ? "품절" : "판매중"}</span>
               </button>
             );
