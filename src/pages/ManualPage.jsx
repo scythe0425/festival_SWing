@@ -8,19 +8,32 @@ export default function ManualPage() {
         <h2 className="manual-role-badge">공통 운영 규정</h2>
 
         <div className="manual-subsection">
-          <h3 className="manual-heading">자릿세 · 기본 안주</h3>
+          <h3 className="manual-heading">자리 이용 규칙</h3>
           <ul className="manual-list">
-            <li>자릿세 인당 <strong>5,000원</strong> / 기본 안주 인당 <strong>1,000원</strong> — 2시간 기준</li>
+            <li>자리 이용료(자릿세) 1인당 <strong>5,000원</strong> — <strong>2시간</strong> 기준</li>
+            <li>늦게 합류한 사람도 동일하게 <strong>별도로 5,000원</strong> 징수</li>
+            <li>
+              이용시간은 <strong>처음 입장한 팀(팀 내 최초 입장자)</strong> 기준 — 합류 시점과 무관하게 동일한 종료 시각 적용
+            </li>
+            <li>예외를 두면 분쟁이 생기므로 모든 테이블에 <strong>동일한 기준을 일관되게</strong> 안내</li>
+            <li>2시간 이후 연장 가능 여부: <strong>미정</strong></li>
             <li>
               별도 결제 없음 — 서버가 첫 주문 시 주문서에 <strong>자릿세를 인원수만큼</strong> 함께 담아 총액을 산정하고, 손님이 <strong>메뉴 금액 + 자릿세가 포함된 총액을 한 번에 입금</strong>하는 방식
             </li>
-            <li>중간 합류 손님은 <strong>테이블 첫 손님 기준 2시간</strong>으로 통일 — 입장 시 명확히 안내</li>
           </ul>
+          <div className="manual-warn">
+            <p className="manual-warn-title">📌 안내문 문구 — 입장 전 반드시 표시</p>
+            <p className="manual-desc">
+              자리 이용료는 1인 5,000원이며, 합류 시점과 관계없이 동일하게 적용됩니다.
+              <br />
+              이용시간은 최초 입장 시각을 기준으로 합니다.
+            </p>
+          </div>
         </div>
 
         <div className="manual-subsection">
           <h3 className="manual-heading">인원당 최소 주문</h3>
-          <p className="manual-desc">인당 9,000원 이상</p>
+          <p className="manual-desc">테이블 방문 인원 × <strong>8,000원</strong> 이상 주문</p>
           <div className="manual-table-wrap">
             <table className="manual-table">
               <thead>
@@ -33,22 +46,56 @@ export default function ManualPage() {
               <tbody>
                 <tr>
                   <td>2명</td>
-                  <td>18,000원 이상</td>
-                  <td>메인 1개</td>
+                  <td>16,000원 이상</td>
+                  <td>메인 1개 (19,000원) 또는 사이드 2개</td>
                 </tr>
                 <tr>
                   <td>3명</td>
-                  <td>27,000원 이상</td>
-                  <td>메인 1개 + 사이드 1개</td>
+                  <td>24,000원 이상</td>
+                  <td>메인 1개 + 사이드 1개 (30,000원)</td>
                 </tr>
                 <tr>
                   <td>4명</td>
-                  <td>36,000원 이상</td>
-                  <td>메인 2개</td>
+                  <td>32,000원 이상</td>
+                  <td>메인 2개 (38,000원)</td>
+                </tr>
+                <tr>
+                  <td>5명</td>
+                  <td>40,000원 이상</td>
+                  <td>메인 2개 + 사이드 1개 (49,000원)</td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="manual-subsection">
+          <h3 className="manual-heading">부스 공간 운영</h3>
+          <ul className="manual-list">
+            <li>중앙 통로는 전자레인지 이용자 대기 동선 — <strong>테이블 설치 불가</strong></li>
+            <li>테이블을 통로에 대놓고 설치하지 않고, 기존 구역에서 일부만 바깥쪽으로 배치</li>
+            <li>한 테이블 전체가 아니라 테이블 일부가 살짝 나오는 정도로만 공간 확보</li>
+          </ul>
+          <div className="manual-warn">
+            <p className="manual-warn-title">📌 안내문 문구 — 단체 손님</p>
+            <p className="manual-desc">단체 손님 예약은 8인 이상부터 가능하며, 현장 상황에 따라 제한될 수 있습니다.</p>
+          </div>
+        </div>
+
+        <div className="manual-subsection">
+          <h3 className="manual-heading">현장 대기 운영</h3>
+          <p className="manual-desc">
+            <strong>전화 · 메시지 예약은 받지 않고</strong>, 현장에 실제로 있는 손님만 순서대로 받습니다.
+            (지난 수기 예약 때 노쇼 · 연락 두절로 좌석을 비워두는 손해가 컸음)
+          </p>
+          <ol className="manual-list manual-list--ol">
+            <li>자리가 없으면 <strong>번호표</strong>를 주고 대기명단에 등록 — 줄만 세우면 공간이 막히므로 번호표 + 현장 대기 방식</li>
+            <li>이용 종료 <strong>20분 전</strong>인 테이블 확인</li>
+            <li>해당 테이블에 연장 여부 질문</li>
+            <li>연장하지 않으면 대기 손님에게 <strong>예상 입장시간</strong> 안내</li>
+            <li>자리가 나면 순서대로 입장</li>
+            <li>호출 시 자리에 없는 손님은 일정 시간 후 <strong>다음 순번으로 넘김</strong></li>
+          </ol>
         </div>
       </section>
 
@@ -124,8 +171,9 @@ export default function ManualPage() {
         </div>
 
         <div className="manual-subsection">
-          <h3 className="manual-heading">예약 탭 — 대기 손님 관리</h3>
+          <h3 className="manual-heading">예약 탭 — 현장 대기 손님 관리</h3>
           <ol className="manual-list manual-list--ol">
+            <li><strong>현장에 있는 손님만</strong> 등록 — 전화 · 메시지 예약은 받지 않음</li>
             <li>상단 등록 폼에 <strong>이름 · 전화번호 · 인원</strong> 입력 후 <strong>등록</strong></li>
             <li>목록은 접수 순서대로 표시 — 이름 · 인원 · 전화번호 · 접수 시각 확인 가능</li>
             <li><strong>전화하기</strong> 버튼으로 해당 번호로 바로 전화 연결</li>
