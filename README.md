@@ -292,7 +292,18 @@ sudo systemctl status nginx
 
 ### 로컬 개발 → EC2 배포
 
+SSH 키(`festival-swing-key.pem`)는 EC2 인스턴스 생성 시 AWS에서 한 번만 내려받을 수 있습니다(재다운로드 불가).
+WSL에서는 `/mnt/c/...`의 파일 권한을 제한할 수 없어 ssh가 거부하므로, 최초 1회 홈으로 복사해 권한을 설정합니다.
+
 ```bash
+# 0-1. (최초 1회) 키를 WSL 홈으로 복사 후 권한 설정
+cp /mnt/c/Users/<윈도우사용자>/Downloads/festival-swing-key.pem ~/
+chmod 400 ~/festival-swing-key.pem
+
+# 0-2. 배포 전 상태 파일 백업
+ssh -i ~/festival-swing-key.pem ubuntu@13.125.114.50 \
+  'cp /home/ubuntu/data/state.json /home/ubuntu/data/state.json.bak-$(date +%m%d-%H%M)'
+
 # 1. 빌드
 npm run build
 
@@ -300,14 +311,17 @@ npm run build
 rsync -av -e "ssh -i ~/festival-swing-key.pem" --delete \
   dist/ ubuntu@13.125.114.50:/home/ubuntu/festival_SWing/dist/
 
-# 3. 서버 파일 배포
-rsync -av -e "ssh -i ~/festival-swing-key.pem" \
+# 3. 서버 파일 배포 (-R: server/, shared/ 폴더 구조 유지 — 없으면 최상위에 평탄화되어 복사됨)
+rsync -avR -e "ssh -i ~/festival-swing-key.pem" \
   server/index.js shared/menu.js \
   ubuntu@13.125.114.50:/home/ubuntu/festival_SWing/
 
-# 4. 재시작
-ssh -i ~/festival-swing-key.pem ubuntu@13.125.114.50 "pm2 restart festival"
+# 4. 재시작 + 로그 확인
+ssh -i ~/festival-swing-key.pem ubuntu@13.125.114.50 \
+  "pm2 restart festival && pm2 logs festival --lines 20 --nostream"
 ```
+
+배포 후 이미 열려 있는 운영 기기(주방·테이블 현황 등)는 새로고침합니다.
 
 ### 배포 구조
 
