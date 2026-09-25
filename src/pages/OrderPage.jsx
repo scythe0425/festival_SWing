@@ -18,6 +18,7 @@ export default function OrderPage() {
   const soldSet = useMemo(() => new Set(state?.soldOutIds ?? []), [state?.soldOutIds]);
 
   const menu = (state?.menu ?? []).filter((m) => !m.gameOnly);
+  const joinGroup = (state?.joinGroups ?? []).find((g) => g.includes(table.trim()));
 
   const setQty = useCallback((menuId, delta) => {
     setQuantities((prev) => {
@@ -178,6 +179,7 @@ export default function OrderPage() {
             />
           </label>
         </div>
+        {joinGroup && <p className="join-hint">🔗 합석 중: {joinGroup.join("·")}번 (타이머·금액 통합)</p>}
         <span className={`conn ${connected ? "ok" : ""}`}>{connected ? "연결됨" : "연결 끊김"}</span>
       </div>
 

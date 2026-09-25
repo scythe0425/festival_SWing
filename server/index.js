@@ -31,7 +31,7 @@ const io = new Server(server, {
 });
 
 /** @typedef {{ menuId: number, name: string, price: number, qty: number, status: "pending" | "done" | "served", lineKey?: string }} OrderLine */
-/** @typedef {{ id: string, table: string, items: OrderLine[], createdAt: number }} KitchenOrder */
+/** @typedef {{ id: string, table: string, items: OrderLine[], createdAt: number, joinedTables?: string[] }} KitchenOrder */
 
 /** @typedef {{ timerStartedAt: number | null, coverQty: number, partySize: number, depositor: string, depositors: string, totalAmount: number, orderHistory: Array<{items: Array<{name:string,price:number,qty:number}>, subtotal:number, createdAt:number}> }} TableState */
 /** @returns {TableState} */
@@ -56,6 +56,8 @@ const state = {
     orderSubmitCount: 0,
   },
   reservations: /** @type {{ id: string, name: string, partySize: number, phone: string, createdAt: number }[]} */ ([]),
+  /** 합석 그룹: 각 그룹은 2개 이상 테이블 번호, 그룹끼리 겹치지 않음 */
+  joinGroups: /** @type {string[][]} */ ([]),
 };
 
 function randomId() {
@@ -109,6 +111,7 @@ function getSnapshot() {
       orderSubmitCount: state.salesStats.orderSubmitCount,
     },
     reservations: state.reservations.map((r) => ({ ...r })),
+    joinGroups: state.joinGroups,
   };
 }
 
@@ -126,6 +129,7 @@ function saveState() {
         settings: state.settings,
         salesStats: state.salesStats,
         reservations: state.reservations,
+        joinGroups: state.joinGroups,
       }),
       "utf8"
     );
@@ -154,6 +158,7 @@ function loadState() {
     if (raw.settings?.defaultLimitMinutes) state.settings.defaultLimitMinutes = raw.settings.defaultLimitMinutes;
     if (raw.salesStats) state.salesStats = { ...state.salesStats, ...raw.salesStats };
     if (Array.isArray(raw.reservations)) state.reservations = raw.reservations;
+    if (Array.isArray(raw.joinGroups)) state.joinGroups = raw.joinGroups;
     console.log("[state] 저장된 상태를 복구했습니다.");
   } catch (e) {
     console.error("[state] 복구 실패, 초기 상태로 시작:", e.message);
@@ -180,6 +185,17 @@ function recordSalesFromItems(items) {
   }
   state.salesStats.totalRevenue += batch;
   state.salesStats.orderSubmitCount += 1;
+}
+
+/** 테이블이 속한 합석 그룹(없으면 자기 자신만) */
+function groupOf(table) {
+  return state.joinGroups.find((g) => g.includes(table)) ?? [table];
+}
+
+function removeFromJoinGroups(table) {
+  state.joinGroups = state.joinGroups
+    .map((g) => g.filter((t) => t !== table))
+    .filter((g) => g.length >= 2);
 }
 
 /**
@@ -239,13 +255,21 @@ function submitOrder(tableRaw, items, partySize, depositor) {
       items: flatLines.map((i) => ({ ...i, status: "pending", lineKey: randomId() })),
       createdAt: Date.now(),
     };
+    const group = groupOf(table);
+    if (group.length >= 2) order.joinedTables = [...group];
     state.kitchenQueue.push(order);
   }
 
-  if (ts.timerStartedAt == null) {
-    ts.timerStartedAt = Date.now();
-  } else if (Date.now() - ts.timerStartedAt >= state.settings.defaultLimitMinutes * 60 * 1000) {
-    ts.timerStartedAt = Date.now();
+  /* 타이머는 합석 그룹 단위: 그룹 중 가장 이른 시작 기준, 시간 초과 후 주문 시 그룹 전체 재시작 */
+  const members = groupOf(table);
+  const starts = members.map((t) => state.tables[t]?.timerStartedAt).filter((v) => v != null);
+  const groupStart = starts.length ? Math.min(...starts) : null;
+  if (groupStart == null || Date.now() - groupStart >= state.settings.defaultLimitMinutes * 60 * 1000) {
+    const now = Date.now();
+    for (const t of members) {
+      if (!state.tables[t]) state.tables[t] = defaultTableState();
+      state.tables[t].timerStartedAt = now;
+    }
   }
 
   return { ok: true };
@@ -323,7 +347,40 @@ io.on("connection", (socket) => {
     const table = String(tableRaw).trim();
     if (!table) return;
     delete state.tables[table];
+    removeFromJoinGroups(table);
     state.kitchenQueue = state.kitchenQueue.filter((o) => o.table !== table);
+    broadcastState();
+  });
+
+  /** 합석: 두 테이블(또는 이미 합석 중인 그룹)을 한 그룹으로 묶고 타이머를 가장 이른 시작 시각으로 맞춤 */
+  socket.on("table:join", (payload, ack) => {
+    const a = String(payload?.table ?? "").trim();
+    const b = String(payload?.other ?? "").trim();
+    const fail = (error) => {
+      if (typeof ack === "function") ack({ ok: false, error });
+    };
+    if (!a || !b) return fail("테이블 번호를 입력하세요.");
+    if (a === b) return fail("같은 테이블은 합석할 수 없습니다.");
+    const merged = [...new Set([...groupOf(a), ...groupOf(b)])].sort((x, y) => Number(x) - Number(y));
+    state.joinGroups = state.joinGroups.filter((g) => !g.includes(a) && !g.includes(b));
+    state.joinGroups.push(merged);
+    const starts = merged.map((t) => state.tables[t]?.timerStartedAt).filter((v) => v != null);
+    if (starts.length) {
+      const earliest = Math.min(...starts);
+      for (const t of merged) {
+        if (!state.tables[t]) state.tables[t] = defaultTableState();
+        state.tables[t].timerStartedAt = earliest;
+      }
+    }
+    broadcastState();
+    if (typeof ack === "function") ack({ ok: true });
+  });
+
+  /** 합석 해제: 해당 테이블만 그룹에서 빠짐(타이머·금액은 테이블별로 그대로) */
+  socket.on("table:unjoin", (tableRaw) => {
+    const table = String(tableRaw ?? "").trim();
+    if (!table) return;
+    removeFromJoinGroups(table);
     broadcastState();
   });
 
@@ -338,6 +395,7 @@ io.on("connection", (socket) => {
       orderSubmitCount: 0,
     };
     state.reservations = [];
+    state.joinGroups = [];
     broadcastState();
   });
 

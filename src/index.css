@@ -1249,6 +1249,13 @@ a.reservation-call {
   letter-spacing: -0.02em;
 }
 
+.kc-join-badge {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .kc-time {
   font-size: 0.78rem;
   color: var(--muted);
@@ -1448,6 +1455,32 @@ a.reservation-call {
 
 .tc-status--empty {
   color: var(--muted);
+}
+
+.tc-join-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.oh-batch-table {
+  font-weight: 700;
+}
+
+.join-hint,
+.join-error {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.join-hint {
+  color: var(--accent);
+}
+
+.join-error {
+  margin-top: 0.4rem;
+  color: var(--danger);
 }
 
 .tc-history-btn {

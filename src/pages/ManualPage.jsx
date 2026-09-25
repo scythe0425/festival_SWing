@@ -108,9 +108,10 @@ export default function ManualPage() {
           <h3 className="manual-heading">주문서 탭 — 기본 흐름</h3>
           <ol className="manual-list manual-list--ol">
             <li>
-              <strong>테이블 번호</strong> 입력 (1~40)
+              <strong>테이블 번호</strong> 입력 (1~60 — 파라솔 1~56, 여유분 책상 57~60)
               <ul className="manual-list manual-list--sub">
                 <li>입력 전 반드시 실제 테이블 번호 확인 — 잘못 입력하면 타이머가 엉뚱한 테이블에 시작됨</li>
+                <li>합석 중인 테이블이면 입력칸 아래 <strong>🔗 합석 중: 3·4번</strong> 안내 표시</li>
               </ul>
             </li>
             <li>
@@ -199,6 +200,7 @@ export default function ManualPage() {
           <ul className="manual-list">
             <li>상단 <strong>대기 N건</strong> — 현재 처리해야 할 주문 수</li>
             <li>주문 카드 구성: <strong>테이블 번호</strong> + <strong>접수 시각</strong> + 메뉴 항목별 목록</li>
+            <li>합석 테이블 주문은 카드에 <strong>🔗 통합 주문 (3·4번)</strong> 표시 — 서빙 시 합석 테이블 전체 확인</li>
             <li>
               각 메뉴마다 <strong>완료 → 서빙 → 취소</strong> 순서로 버튼 변경
               <ul className="manual-list manual-list--sub">
@@ -222,7 +224,7 @@ export default function ManualPage() {
         <div className="manual-subsection">
           <h3 className="manual-heading">테이블 현황 탭 — 전체 모니터링</h3>
           <ul className="manual-list">
-            <li>1~40번 테이블 전체 한눈에 확인 — 상단에 <strong>이용 중 N / 40</strong> 표시</li>
+            <li>1~60번 테이블 전체 한눈에 확인 — 상단에 <strong>이용 중 N / 60</strong> 표시</li>
             <li>
               카드 색상으로 상태 구분
               <ul className="manual-list manual-list--sub">
@@ -244,6 +246,15 @@ export default function ManualPage() {
         <div className="manual-subsection">
           <h3 className="manual-heading">테이블 현황 탭 — 주요 버튼</h3>
           <ul className="manual-list">
+            <li>
+              <strong>합석</strong> 버튼 — 다른 테이블과 합석 지정
+              <ul className="manual-list manual-list--sub">
+                <li>합석할 테이블 번호 입력 후 <strong>합석</strong> — 카드에 <strong>🔗 합석 3·4번</strong> 표시</li>
+                <li>타이머는 <strong>가장 먼저 입장한 테이블 기준</strong>으로 통일, 인원 · 금액 · 입금자는 합산 표시</li>
+                <li>합석 중 내역 버튼은 합석 테이블 전체 주문을 테이블 번호와 함께 표시</li>
+                <li>잘못 지정한 경우 같은 버튼 → <strong>이 테이블 합석 해제</strong></li>
+              </ul>
+            </li>
             <li>
               <strong>내역</strong> 버튼 — 주문 내역 모달
               <ul className="manual-list manual-list--sub">
