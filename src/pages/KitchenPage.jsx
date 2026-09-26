@@ -55,9 +55,6 @@ export default function KitchenPage() {
             <article key={o.id} className="kitchen-card">
               <header className="kc-head">
                 <span className="kc-table">{o.table}번</span>
-                {o.joinedTables?.length >= 2 && (
-                  <span className="kc-join-badge">🔗 통합 주문 ({o.joinedTables.join("·")}번)</span>
-                )}
                 <time className="kc-time">{formatTime(o.createdAt)}</time>
                 <button
                   type="button"
@@ -68,6 +65,9 @@ export default function KitchenPage() {
                   ✕
                 </button>
               </header>
+              {o.joinedTables?.length >= 2 && (
+                <p className="kc-join-badge">🔗 통합 주문 ({o.joinedTables.join("·")}번)</p>
+              )}
               <ul className="kc-items">
                 {o.items.map((it, i) => {
                   const status = it.status;

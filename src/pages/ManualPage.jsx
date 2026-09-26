@@ -120,7 +120,8 @@ export default function ManualPage() {
               <ul className="manual-list manual-list--sub">
                 <li>첫 주문 시: 현재 테이블 전체 인원수 입력</li>
                 <li>중간 합류 주문 시: 새로 합류한 인원수만 입력 — 기존 인원에 자동 가산</li>
-                <li>테이블 현황 카드에 반영되므로 반드시 입력 (미입력 시 주문 완료 버튼 비활성)</li>
+                <li>첫 주문(빈 테이블)은 반드시 입력 — 미입력 시 주문 완료 버튼 비활성</li>
+                <li>이미 이용 중인 테이블이나 이용 중인 테이블과 합석한 경우 칸이 <strong>추가 인원 (선택)</strong>으로 바뀜 — 합류 인원이 없으면 비워두고 주문</li>
               </ul>
             </li>
             <li>
@@ -137,7 +138,7 @@ export default function ManualPage() {
             <li>
               하단 <strong>주문 완료</strong> 버튼 클릭
               <ul className="manual-list manual-list--sub">
-                <li>테이블 번호 · 인원수 · 메뉴 중 하나라도 미입력이면 버튼 비활성</li>
+                <li>테이블 번호 · 메뉴 · (첫 주문 시) 인원수 중 하나라도 미입력이면 버튼 비활성</li>
               </ul>
             </li>
             <li>

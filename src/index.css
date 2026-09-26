@@ -1219,14 +1219,17 @@ a.reservation-call {
 }
 
 /* —— 주방 그리드 —— */
+/* 카드 너비는 내용(메뉴 이름·통합 주문 표시)에 맞춰 늘어나고, 화면보다 넓어지지는 않음 */
 .kitchen-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .kitchen-card {
+  min-width: 180px;
+  max-width: 100%;
   background: var(--surface);
   border: 2px solid var(--accent-dim);
   border-radius: 12px;
@@ -1247,10 +1250,11 @@ a.reservation-call {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .kc-join-badge {
-  flex: 1;
+  margin: 0;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--accent);
@@ -1259,6 +1263,7 @@ a.reservation-call {
 .kc-time {
   font-size: 0.78rem;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .kc-items {
@@ -1651,8 +1656,11 @@ a.reservation-call {
   }
 
   .kitchen-grid {
-    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
     gap: 0.45rem;
+  }
+
+  .kitchen-card {
+    min-width: 145px;
   }
 
   .tc-timer {

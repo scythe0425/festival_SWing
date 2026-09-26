@@ -19,6 +19,8 @@ export default function OrderPage() {
 
   const menu = (state?.menu ?? []).filter((m) => !m.gameOnly);
   const joinGroup = (state?.joinGroups ?? []).find((g) => g.includes(table.trim()));
+  /** 이미 이용 중인 테이블(또는 이용 중인 테이블과 합석)이면 인원 추가 입력은 선택 */
+  const partySizeOptional = (joinGroup ?? [table.trim()]).some((t) => state?.tables?.[t]?.timerStartedAt != null);
   /** 합석 그룹이 시간 초과면 이번 주문으로 그룹 전체 타이머가 다시 시작됨 */
   const joinGroupOver = (() => {
     if (!joinGroup) return false;
@@ -95,7 +97,8 @@ export default function OrderPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [paymentModalOpen]);
 
-  const canSubmit = connected && lines.length > 0 && table.trim().length > 0 && Number(partySize) >= 1;
+  const canSubmit =
+    connected && lines.length > 0 && table.trim().length > 0 && (partySizeOptional || Number(partySize) >= 1);
 
   const byCategory = useMemo(() => {
     const map = new Map();
@@ -161,14 +164,14 @@ export default function OrderPage() {
             />
           </label>
           <label className="field-label">
-            인원수
+            {partySizeOptional ? "추가 인원 (선택)" : "인원수"}
             <input
               type="number"
               inputMode="numeric"
               min={1}
               max={99}
               autoComplete="off"
-              placeholder="명"
+              placeholder={partySizeOptional ? "합류 인원만" : "명"}
               value={partySize}
               onChange={(e) => setPartySize(e.target.value.replace(/\D/g, ""))}
               className="field-input"
